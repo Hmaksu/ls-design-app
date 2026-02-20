@@ -356,16 +356,17 @@ const contactRateMap = new Map();
 
 // Create SMTP transporter once at startup (if configured)
 let mailTransporter = null;
-const smtpHost = process.env.SMTP_HOST;
-const smtpUser = process.env.SMTP_USER;
-const smtpPass = process.env.SMTP_PASS;
-const contactTo = process.env.CONTACT_TO_EMAIL;
+const smtpHost = (process.env.SMTP_HOST || '').replace(/['"]/g, '');
+const smtpUser = (process.env.SMTP_USER || '').replace(/['"]/g, '');
+const smtpPass = (process.env.SMTP_PASS || '').replace(/['"]/g, '');
+const contactTo = (process.env.CONTACT_TO_EMAIL || '').replace(/['"]/g, '');
 
 if (smtpHost && smtpUser && smtpPass && contactTo) {
+    const smtpPort = parseInt((process.env.SMTP_PORT || '').replace(/['"]/g, '') || '587');
     mailTransporter = nodemailer.createTransport({
         host: smtpHost,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: false,
+        port: smtpPort,
+        secure: smtpPort === 465, // Must be true for 465, false for 587
         requireTLS: true,
         auth: { user: smtpUser, pass: smtpPass },
         tls: { rejectUnauthorized: false }
