@@ -307,7 +307,7 @@ function App() {
               <span className="text-xs text-slate-300 mr-2">{user.name}</span>
             )}
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              v1.1
+              v2.0.0
             </div>
           </div>
         </div>
@@ -420,7 +420,7 @@ function App() {
 
       <footer className="bg-white text-slate-500 py-6 mt-auto border-t border-slate-100">
         <div className="container mx-auto px-4 text-center text-sm">
-          <p>&copy; {new Date().getFullYear()} Learning Station Design Tool. Powered by Gemini API.</p>
+          <p>&copy; {new Date().getFullYear()} Learning Station Design Tool.</p>
         </div>
       </footer>
     </div>

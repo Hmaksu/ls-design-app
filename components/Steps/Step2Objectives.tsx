@@ -41,32 +41,6 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
         Ensure your objectives are written within the SMART (Specific, Measurable, Achievable, Relevant, Time-bound) framework.
       </p>
 
-      {aiSuggestions.length > 0 && (
-        <div className="mb-6 bg-purple-50 p-4 rounded-md border border-purple-100">
-          <h3 className="text-sm font-bold text-purple-800 mb-2">AI Suggestions:</h3>
-          <ul className="space-y-2">
-            {aiSuggestions.map((sugg, idx) => (
-              <li key={idx} className="flex items-start justify-between text-sm text-purple-700 bg-white p-2 rounded border border-purple-100 shadow-sm">
-                <span>{sugg}</span>
-                <button
-                  onClick={() => {
-                    const emptyObj = currentLS.objectives.find(o => !o.text);
-                    if (emptyObj) updateObjective(emptyObj.id, sugg);
-                    else {
-                      navigator.clipboard.writeText(sugg);
-                      alert("Copied! You can paste it into a new objective.");
-                    }
-                  }}
-                  className="text-xs bg-purple-200 px-2 py-1 rounded hover:bg-purple-300 ml-2 whitespace-nowrap"
-                >
-                  Copy
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <div className="space-y-4">
         {currentLS.objectives.map((obj, index) => (
           <div key={obj.id} className="flex items-start space-x-3">
