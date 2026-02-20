@@ -1,7 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 
 const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+let ai: GoogleGenAI | null = null;
+function getAI() {
+  if (!apiKey) return null;
+  if (!ai) ai = new GoogleGenAI({ apiKey });
+  return ai;
+}
 
 export const generateObjectivesWithAI = async (subject: string, level: string): Promise<string[]> => {
   if (!apiKey) return ["API Key not found. Please check environment variables."];
@@ -13,7 +18,7 @@ export const generateObjectivesWithAI = async (subject: string, level: string): 
       Return only the objectives as a bulleted list. Do not add any other text. Respond in English.
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI()!.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
@@ -28,10 +33,10 @@ export const generateObjectivesWithAI = async (subject: string, level: string): 
 };
 
 export const generateModuleIdeasWithAI = async (objective: string): Promise<any> => {
-   if (!apiKey) return null;
+  if (!apiKey) return null;
 
-   try {
-     const prompt = `
+  try {
+    const prompt = `
        Create a Learning Station module draft for the following learning objective: "${objective}".
        
        Return a single JSON object with the following fields:
@@ -44,7 +49,7 @@ export const generateModuleIdeasWithAI = async (objective: string): Promise<any>
        Return only JSON.
      `;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI()!.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
@@ -53,8 +58,8 @@ export const generateModuleIdeasWithAI = async (objective: string): Promise<any>
     });
 
     return JSON.parse(response.text || '{}');
-   } catch (error) {
-     console.error("Gemini Error:", error);
-     return null;
-   }
+  } catch (error) {
+    console.error("Gemini Error:", error);
+    return null;
+  }
 };
