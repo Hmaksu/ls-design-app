@@ -407,26 +407,7 @@ app.post('/api/contact', async (req, res) => {
             'INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)'
         ).run(name, email, subject || '', message);
 
-        // Send email
-        let emailSent = false;
-        if (mailTransporter) {
-            try {
-                await mailTransporter.sendMail({
-                    from: `"LS Designer Feedback" <${smtpUser}>`,
-                    to: contactTo,
-                    replyTo: email,
-                    subject: `[LS Feedback] ${subject || 'No Subject'}`,
-                    text: `From: ${name} <${email}>\n\n${message}`,
-                    html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p><strong>Subject:</strong> ${subject || 'N/A'}</p><hr><p>${message.replace(/\n/g, '<br>')}</p>`
-                });
-                emailSent = true;
-                console.log('[Contact] ✅ Email sent to', contactTo, 'from', email);
-            } catch (err) {
-                console.error('[Contact] ❌ Email send failed:', err.message);
-            }
-        }
-
-        res.json({ success: true, emailSent });
+        res.json({ success: true });
     } catch (err) {
         console.error('Contact error:', err);
         res.status(500).json({ error: 'Internal server error' });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Send, X, Loader2, CheckCircle, AlertCircle, MessageSquare } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 
 interface ContactFormProps {
     onClose: () => void;
@@ -25,19 +26,25 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
         setErrorMsg('');
 
         try {
-            const res = await fetch('/api/contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim(), email: email.trim(), subject: subject.trim(), message: message.trim() }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to send');
+            // Replace these with your actual EmailJS credentials
+            const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'dummy_service';
+            const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'dummy_template';
+            const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'dummy_public_key';
+
+            const templateParams = {
+                from_name: name.trim(),
+                from_email: email.trim(),
+                subject: subject.trim(),
+                message: message.trim(),
+            };
+
+            await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
             setStatus('success');
             setSubject('');
             setMessage('');
         } catch (err: any) {
             setStatus('error');
-            setErrorMsg(err.message || 'Something went wrong');
+            setErrorMsg(err?.text || err.message || 'Error connecting to email service');
         } finally {
             setSending(false);
         }
