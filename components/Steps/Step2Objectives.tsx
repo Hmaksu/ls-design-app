@@ -15,18 +15,18 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
     }
     setLoadingAI(true);
     const suggestions = await generateObjectivesWithAI(currentLS.subject, currentLS.level);
-    
+
     // Auto-fill empty objectives or add new ones
     suggestions.forEach((text, index) => {
-        // If we have an empty slot, use it, otherwise add new
-        if (currentLS.objectives[index] && currentLS.objectives[index].text === '') {
-            updateObjective(currentLS.objectives[index].id, text);
-        } else {
-            // Context needs refactor for adding with text, skipping auto-add to state for now to keep it simple
-            // User can copy paste from UI
-        }
+      // If we have an empty slot, use it, otherwise add new
+      if (currentLS.objectives[index] && currentLS.objectives[index].text === '') {
+        updateObjective(currentLS.objectives[index].id, text);
+      } else {
+        // Context needs refactor for adding with text, skipping auto-add to state for now to keep it simple
+        // User can copy paste from UI
+      }
     });
-    
+
     setAiSuggestions(suggestions);
     setLoadingAI(false);
   };
@@ -35,14 +35,6 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in">
       <div className="flex justify-between items-center mb-6 border-b pb-2">
         <h2 className="text-2xl font-bold text-itu-blue">2. Learning Objectives</h2>
-        <button 
-          onClick={handleAI}
-          disabled={loadingAI}
-          className="flex items-center space-x-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium hover:bg-purple-200 transition-colors"
-        >
-          {loadingAI ? <Loader2 className="w-4 h-4 animate-spin"/> : <Sparkles className="w-4 h-4" />}
-          <span>Suggest SMART Objectives with AI</span>
-        </button>
       </div>
 
       <p className="text-slate-500 mb-6 text-sm">
@@ -56,16 +48,16 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
             {aiSuggestions.map((sugg, idx) => (
               <li key={idx} className="flex items-start justify-between text-sm text-purple-700 bg-white p-2 rounded border border-purple-100 shadow-sm">
                 <span>{sugg}</span>
-                <button 
-                   onClick={() => {
-                     const emptyObj = currentLS.objectives.find(o => !o.text);
-                     if(emptyObj) updateObjective(emptyObj.id, sugg);
-                     else {
-                        navigator.clipboard.writeText(sugg);
-                        alert("Copied! You can paste it into a new objective.");
-                     }
-                   }}
-                   className="text-xs bg-purple-200 px-2 py-1 rounded hover:bg-purple-300 ml-2 whitespace-nowrap"
+                <button
+                  onClick={() => {
+                    const emptyObj = currentLS.objectives.find(o => !o.text);
+                    if (emptyObj) updateObjective(emptyObj.id, sugg);
+                    else {
+                      navigator.clipboard.writeText(sugg);
+                      alert("Copied! You can paste it into a new objective.");
+                    }
+                  }}
+                  className="text-xs bg-purple-200 px-2 py-1 rounded hover:bg-purple-300 ml-2 whitespace-nowrap"
                 >
                   Copy
                 </button>
