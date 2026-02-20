@@ -73,13 +73,16 @@ function initTables() {
     try { db.exec(sql); } catch (e) { /* column already exists */ }
   }
 
-  // Auto-promote admin: if ADMIN_EMAIL is set, make that user admin
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (adminEmail) {
-    try {
-      db.prepare("UPDATE users SET role = 'admin' WHERE email = ?").run(adminEmail);
-      console.log('👑 Admin role set for:', adminEmail);
-    } catch (e) { /* ignore */ }
+  // Auto-promote admin: if ADMIN_EMAIL is set, make those users admin
+  const adminEmailsRaw = process.env.ADMIN_EMAIL;
+  if (adminEmailsRaw) {
+    const adminEmails = adminEmailsRaw.split(',').map(e => e.trim()).filter(Boolean);
+    for (const ae of adminEmails) {
+      try {
+        db.prepare("UPDATE users SET role = 'admin' WHERE email = ?").run(ae);
+      } catch (e) { /* ignore */ }
+    }
+    console.log('👑 Admin role set for:', adminEmails.join(', '));
   }
 
   // If no admin exists at all, make the first user (id=1) admin

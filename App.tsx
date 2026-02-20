@@ -307,7 +307,7 @@ function App() {
               <span className="text-xs text-slate-300 mr-2">{user.name}</span>
             )}
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              v2.0.0
+              v2.1.3
             </div>
           </div>
         </div>

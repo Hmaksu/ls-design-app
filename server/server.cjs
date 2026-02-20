@@ -56,8 +56,8 @@ app.post('/api/auth/register', (req, res) => {
 
         // First user becomes admin automatically
         const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-        const adminEmail = process.env.ADMIN_EMAIL || '';
-        const role = (userCount === 0 || email === adminEmail) ? 'admin' : 'user';
+        const adminEmails = (process.env.ADMIN_EMAIL || '').split(',').map(e => e.trim()).filter(Boolean);
+        const role = (userCount === 0 || adminEmails.includes(email)) ? 'admin' : 'user';
 
         const result = db.prepare(
             'INSERT INTO users (name, email, password_hash, role, security_question, security_answer) VALUES (?, ?, ?, ?, ?, ?)'
@@ -91,8 +91,8 @@ app.post('/api/auth/login', (req, res) => {
 
         // Auto-promote if this email matches ADMIN_EMAIL
         let role = user.role || 'user';
-        const adminEmail = process.env.ADMIN_EMAIL || '';
-        if (adminEmail && email === adminEmail && role !== 'admin') {
+        const adminEmails = (process.env.ADMIN_EMAIL || '').split(',').map(e => e.trim()).filter(Boolean);
+        if (adminEmails.length > 0 && adminEmails.includes(email) && role !== 'admin') {
             db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id);
             role = 'admin';
         }
@@ -117,8 +117,8 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
         return res.status(404).json({ error: 'User not found' });
     }
     // Auto-promote if ADMIN_EMAIL matches
-    const adminEmail = process.env.ADMIN_EMAIL || '';
-    if (adminEmail && user.email === adminEmail && user.role !== 'admin') {
+    const adminEmails = (process.env.ADMIN_EMAIL || '').split(',').map(e => e.trim()).filter(Boolean);
+    if (adminEmails.length > 0 && adminEmails.includes(user.email) && user.role !== 'admin') {
         db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id);
         user.role = 'admin';
     }
