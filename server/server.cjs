@@ -1,0 +1,468 @@
+// Load .env file from server directory
+const fs = require('fs');
+const path = require('path');
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+    fs.readFileSync(envPath, 'utf-8').split('\n').forEach(line => {
+        line = line.trim();
+        if (!line || line.startsWith('#')) return;
+        const [key, ...rest] = line.split('=');
+        if (key && rest.length) process.env[key.trim()] = rest.join('=').trim();
+    });
+}
+
+const express = require('express');
+const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
+const { getDb } = require('./db.cjs');
+const { generateToken, authMiddleware } = require('./auth.cjs');
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+
+// ═══════════════════════════════════════════
+// AUTH ROUTES
+// ═══════════════════════════════════════════
+
+// POST /api/auth/register
+app.post('/api/auth/register', (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: 'Name, email, and password are required' });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+
+        const db = getDb();
+
+        const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+        if (existing) {
+            return res.status(409).json({ error: 'Email already registered' });
+        }
+
+        const passwordHash = bcrypt.hashSync(password, 10);
+        const result = db.prepare(
+            'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)'
+        ).run(name, email, passwordHash);
+
+        const user = { id: result.lastInsertRowid, name, email };
+        const token = generateToken(user);
+
+        res.status(201).json({ user, token });
+    } catch (err) {
+        console.error('Register error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/auth/login
+app.post('/api/auth/login', (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        const db = getDb();
+        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+
+        if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        const token = generateToken({ id: user.id, name: user.name, email: user.email });
+
+        res.json({
+            user: { id: user.id, name: user.name, email: user.email },
+            token
+        });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /api/auth/me
+app.get('/api/auth/me', authMiddleware, (req, res) => {
+    const db = getDb();
+    const user = db.prepare('SELECT id, name, email, created_at FROM users WHERE id = ?').get(req.user.id);
+    if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ user });
+});
+
+// ═══════════════════════════════════════════
+// HELPER: Check if user can access station
+// ═══════════════════════════════════════════
+function getStationAccess(db, stationId, userId) {
+    const station = db.prepare('SELECT * FROM learning_stations WHERE id = ?').get(stationId);
+    if (!station) return { station: null, role: null };
+
+    if (station.user_id === userId) return { station, role: 'owner' };
+
+    const collab = db.prepare('SELECT * FROM station_collaborators WHERE station_id = ? AND user_id = ?').get(stationId, userId);
+    if (collab) return { station, role: 'collaborator' };
+
+    return { station: null, role: null };
+}
+
+// ═══════════════════════════════════════════
+// LEARNING STATION ROUTES (Protected)
+// ═══════════════════════════════════════════
+
+// GET /api/ls — list user's own + shared learning stations
+app.get('/api/ls', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+
+        // Own stations
+        const owned = db.prepare(
+            'SELECT id, title, code, created_at, updated_at FROM learning_stations WHERE user_id = ? ORDER BY updated_at DESC'
+        ).all(req.user.id);
+
+        const enrichOwned = owned.map(s => {
+            try {
+                const full = db.prepare('SELECT data FROM learning_stations WHERE id = ?').get(s.id);
+                const parsed = JSON.parse(full.data);
+                return { ...s, moduleCount: parsed.modules?.length || 0, level: parsed.level || '', role: 'owner' };
+            } catch {
+                return { ...s, moduleCount: 0, level: '', role: 'owner' };
+            }
+        });
+
+        // Shared stations
+        const shared = db.prepare(`
+            SELECT ls.id, ls.title, ls.code, ls.created_at, ls.updated_at, u.name as owner_name
+            FROM station_collaborators sc
+            JOIN learning_stations ls ON sc.station_id = ls.id
+            JOIN users u ON ls.user_id = u.id
+            WHERE sc.user_id = ?
+            ORDER BY ls.updated_at DESC
+        `).all(req.user.id);
+
+        const enrichShared = shared.map(s => {
+            try {
+                const full = db.prepare('SELECT data FROM learning_stations WHERE id = ?').get(s.id);
+                const parsed = JSON.parse(full.data);
+                return { ...s, moduleCount: parsed.modules?.length || 0, level: parsed.level || '', role: 'collaborator' };
+            } catch {
+                return { ...s, moduleCount: 0, level: '', role: 'collaborator' };
+            }
+        });
+
+        res.json({ stations: [...enrichOwned, ...enrichShared] });
+    } catch (err) {
+        console.error('List LS error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/ls — create a new learning station
+app.post('/api/ls', authMiddleware, (req, res) => {
+    try {
+        const { station } = req.body;
+        if (!station || !station.id) {
+            return res.status(400).json({ error: 'Station data is required' });
+        }
+
+        const db = getDb();
+        db.prepare(
+            'INSERT INTO learning_stations (id, user_id, title, code, data) VALUES (?, ?, ?, ?, ?)'
+        ).run(station.id, req.user.id, station.title || '', station.code || '', JSON.stringify(station));
+
+        res.status(201).json({ success: true, id: station.id });
+    } catch (err) {
+        if (err.message?.includes('UNIQUE constraint')) {
+            return res.status(409).json({ error: 'A station with this ID already exists' });
+        }
+        console.error('Create LS error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// PUT /api/ls/:id — update a learning station (owner or collaborator)
+app.put('/api/ls/:id', authMiddleware, (req, res) => {
+    try {
+        const { station } = req.body;
+        if (!station) {
+            return res.status(400).json({ error: 'Station data is required' });
+        }
+
+        const db = getDb();
+        const { role } = getStationAccess(db, req.params.id, req.user.id);
+
+        if (!role) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+
+        db.prepare(
+            "UPDATE learning_stations SET title = ?, code = ?, data = ?, updated_at = datetime('now') WHERE id = ?"
+        ).run(station.title || '', station.code || '', JSON.stringify(station), req.params.id);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Update LS error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// DELETE /api/ls/:id — delete a learning station (owner only)
+app.delete('/api/ls/:id', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+
+        const existing = db.prepare('SELECT user_id FROM learning_stations WHERE id = ?').get(req.params.id);
+        if (!existing) {
+            return res.status(404).json({ error: 'Station not found' });
+        }
+        if (existing.user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+
+        db.prepare('DELETE FROM learning_stations WHERE id = ?').run(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Delete LS error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /api/ls/:id — get a single learning station (owner or collaborator)
+app.get('/api/ls/:id', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const { station, role } = getStationAccess(db, req.params.id, req.user.id);
+
+        if (!station || !role) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+
+        res.json({ station: { ...station, data: JSON.parse(station.data) } });
+    } catch (err) {
+        console.error('Get LS error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ═══════════════════════════════════════════
+// COLLABORATION ROUTES
+// ═══════════════════════════════════════════
+
+// POST /api/ls/:id/share — share station with another user by email
+app.post('/api/ls/:id/share', authMiddleware, (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+
+        const db = getDb();
+
+        const station = db.prepare('SELECT user_id FROM learning_stations WHERE id = ?').get(req.params.id);
+        if (!station) {
+            return res.status(404).json({ error: 'Station not found' });
+        }
+        if (station.user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Only the owner can share' });
+        }
+
+        const targetUser = db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(email);
+        if (!targetUser) {
+            return res.status(404).json({ error: 'No user found with that email' });
+        }
+        if (targetUser.id === req.user.id) {
+            return res.status(400).json({ error: 'Cannot share with yourself' });
+        }
+
+        const existing = db.prepare('SELECT * FROM station_collaborators WHERE station_id = ? AND user_id = ?').get(req.params.id, targetUser.id);
+        if (existing) {
+            return res.status(409).json({ error: 'Already shared with this user' });
+        }
+
+        db.prepare('INSERT INTO station_collaborators (station_id, user_id) VALUES (?, ?)').run(req.params.id, targetUser.id);
+
+        res.json({ success: true, collaborator: { id: targetUser.id, name: targetUser.name, email: targetUser.email } });
+    } catch (err) {
+        console.error('Share error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /api/ls/:id/collaborators — list collaborators
+app.get('/api/ls/:id/collaborators', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+
+        const station = db.prepare('SELECT user_id FROM learning_stations WHERE id = ?').get(req.params.id);
+        if (!station) {
+            return res.status(404).json({ error: 'Station not found' });
+        }
+        if (station.user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Only the owner can view collaborators' });
+        }
+
+        const collaborators = db.prepare(`
+            SELECT u.id, u.name, u.email, sc.added_at
+            FROM station_collaborators sc
+            JOIN users u ON sc.user_id = u.id
+            WHERE sc.station_id = ?
+        `).all(req.params.id);
+
+        res.json({ collaborators });
+    } catch (err) {
+        console.error('List collaborators error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// DELETE /api/ls/:id/share/:userId — remove a collaborator
+app.delete('/api/ls/:id/share/:userId', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+
+        const station = db.prepare('SELECT user_id FROM learning_stations WHERE id = ?').get(req.params.id);
+        if (!station) {
+            return res.status(404).json({ error: 'Station not found' });
+        }
+        if (station.user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Only the owner can remove collaborators' });
+        }
+
+        db.prepare('DELETE FROM station_collaborators WHERE station_id = ? AND user_id = ?').run(req.params.id, parseInt(req.params.userId));
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Unshare error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ═══════════════════════════════════════════
+// CONTACT / FEEDBACK
+// ═══════════════════════════════════════════
+
+// Simple rate limiter (1 message per 60s per IP)
+const contactRateMap = new Map();
+
+// Create SMTP transporter once at startup (if configured)
+let mailTransporter = null;
+const smtpHost = process.env.SMTP_HOST;
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASS;
+const contactTo = process.env.CONTACT_TO_EMAIL;
+
+if (smtpHost && smtpUser && smtpPass && contactTo) {
+    mailTransporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: false,
+        requireTLS: true,
+        auth: { user: smtpUser, pass: smtpPass },
+        tls: { rejectUnauthorized: false }
+    });
+
+    // Verify SMTP connection on startup
+    mailTransporter.verify()
+        .then(() => console.log('✅ SMTP connected successfully —', smtpUser, '→', contactTo))
+        .catch(err => {
+            console.error('❌ SMTP verification failed:', err.message);
+            console.error('   Check your .env credentials (SMTP_USER, SMTP_PASS)');
+            mailTransporter = null;
+        });
+} else {
+    console.log('⚠️  SMTP not configured. Contact messages will only be saved to DB.');
+    console.log('   Set SMTP_HOST, SMTP_USER, SMTP_PASS, CONTACT_TO_EMAIL in server/.env');
+}
+
+app.post('/api/contact', async (req, res) => {
+    try {
+        const { name, email, subject, message } = req.body;
+
+        if (!name || !email || !message) {
+            return res.status(400).json({ error: 'Name, email, and message are required' });
+        }
+
+        // Rate limit check
+        const ip = req.ip || req.connection.remoteAddress;
+        const now = Date.now();
+        const lastSent = contactRateMap.get(ip) || 0;
+        if (now - lastSent < 60000) {
+            return res.status(429).json({ error: 'Please wait a minute before sending another message' });
+        }
+        contactRateMap.set(ip, now);
+
+        // Save to DB
+        const db = getDb();
+        db.prepare(
+            'INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)'
+        ).run(name, email, subject || '', message);
+
+        // Send email
+        let emailSent = false;
+        if (mailTransporter) {
+            try {
+                await mailTransporter.sendMail({
+                    from: `"LS Designer Feedback" <${smtpUser}>`,
+                    to: contactTo,
+                    replyTo: email,
+                    subject: `[LS Feedback] ${subject || 'No Subject'}`,
+                    text: `From: ${name} <${email}>\n\n${message}`,
+                    html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p><strong>Subject:</strong> ${subject || 'N/A'}</p><hr><p>${message.replace(/\n/g, '<br>')}</p>`
+                });
+                emailSent = true;
+                console.log('[Contact] ✅ Email sent to', contactTo, 'from', email);
+            } catch (err) {
+                console.error('[Contact] ❌ Email send failed:', err.message);
+            }
+        }
+
+        res.json({ success: true, emailSent });
+    } catch (err) {
+        console.error('Contact error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Admin: view all contact messages (requires auth)
+app.get('/api/admin/messages', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const messages = db.prepare(
+            'SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 100'
+        ).all();
+        res.json({ messages });
+    } catch (err) {
+        console.error('Admin messages error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// ═══════════════════════════════════════════
+// SERVE FRONTEND (Production)
+// ═══════════════════════════════════════════
+const distPath = path.join(__dirname, '..', 'dist');
+if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    // SPA fallback: all non-API routes serve index.html
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+    });
+    console.log('📁 Serving frontend from', distPath);
+}
+
+// ═══════════════════════════════════════════
+// START SERVER
+// ═══════════════════════════════════════════
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 LS Designer running on http://0.0.0.0:${PORT}`);
+    console.log(`   Database: ${path.join(__dirname, 'data.db')}\n`);
+});
