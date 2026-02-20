@@ -27,6 +27,9 @@ function initTables() {
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user',
+      security_question TEXT DEFAULT '',
+      security_answer TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -59,6 +62,34 @@ function initTables() {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Migration: add columns to existing databases
+  const migrations = [
+    "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'",
+    "ALTER TABLE users ADD COLUMN security_question TEXT DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN security_answer TEXT DEFAULT ''"
+  ];
+  for (const sql of migrations) {
+    try { db.exec(sql); } catch (e) { /* column already exists */ }
+  }
+
+  // Auto-promote admin: if ADMIN_EMAIL is set, make that user admin
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    try {
+      db.prepare("UPDATE users SET role = 'admin' WHERE email = ?").run(adminEmail);
+      console.log('👑 Admin role set for:', adminEmail);
+    } catch (e) { /* ignore */ }
+  }
+
+  // If no admin exists at all, make the first user (id=1) admin
+  const adminExists = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+  if (!adminExists) {
+    try {
+      db.prepare("UPDATE users SET role = 'admin' WHERE id = 1").run();
+      console.log('👑 First user promoted to admin');
+    } catch (e) { /* ignore */ }
+  }
 }
 
 module.exports = { getDb };

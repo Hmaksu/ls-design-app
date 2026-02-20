@@ -3,7 +3,7 @@ import { LSContextType, LSContent, DeliveryModeType } from '../../types';
 import { FileDown, Loader2, FileCode, FileText } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { DELIVERY_MODE_LABELS } from '../../constants';
+import { DELIVERY_MODE_LABELS, DELIVERY_MODE_ICONS } from '../../constants';
 
 // Fetch Roboto font at runtime from Google CDN and convert to base64
 const ROBOTO_URL = 'https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.ttf';
@@ -248,26 +248,45 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
             doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
             doc.setFont('Roboto');
 
-            // --- PAGE 1: INFORMATION TABLE ---
-            doc.setFontSize(16);
-            doc.text('LEARNING STATION DESIGN', 148, 15, { align: 'center' });
-            doc.setFontSize(12);
-            doc.text('INFORMATION TABLE', 14, 25);
+            const ITU_BLUE: [number, number, number] = [0, 38, 100]; // #002664
+            const HEADER_BG: [number, number, number] = [242, 242, 242];
+            const MODULE_BG: [number, number, number] = [230, 230, 230];
+            const CHECK_BG: [number, number, number] = [230, 243, 255];
+
+            // --- PAGE 1: INFORMATION TABLE (Portrait for better readability) ---
+            doc.setFontSize(18);
+            doc.setTextColor(...ITU_BLUE);
+            doc.text('LEARNING STATION DESIGN', 148, 18, { align: 'center' });
+            doc.setFontSize(13);
+            doc.text('INFORMATION TABLE', 148, 27, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
 
             const infoTableBody = getInfoTableData();
 
             autoTable(doc, {
-                startY: 30,
+                startY: 33,
                 head: [['Field', 'Value']],
                 body: infoTableBody,
                 theme: 'grid',
+                headStyles: {
+                    font: 'Roboto',
+                    fillColor: ITU_BLUE,
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    fontSize: 10,
+                    cellPadding: 4,
+                    halign: 'center',
+                },
                 styles: {
                     font: 'Roboto',
-                    fontSize: 10,
-                    cellPadding: 2
+                    fontSize: 9,
+                    cellPadding: 3,
+                    lineWidth: 0.3,
+                    lineColor: [0, 0, 0],
+                    overflow: 'linebreak',
                 },
                 columnStyles: {
-                    0: { fontStyle: 'bold', cellWidth: 60 },
+                    0: { fontStyle: 'bold', cellWidth: 65, fillColor: HEADER_BG },
                     1: { cellWidth: 'auto' }
                 },
                 pageBreak: 'auto'
@@ -275,51 +294,67 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
 
             // --- PAGE 2: MATRIX ---
             doc.addPage('a4', 'landscape');
-            doc.setFontSize(14);
-            doc.text('LS MATRIX', 14, 15);
+            doc.setFontSize(18);
+            doc.setTextColor(...ITU_BLUE);
+            doc.text('LEARNING STATION DESIGN', 148, 14, { align: 'center' });
+            doc.setFontSize(13);
+            doc.text('LS MATRIX', 148, 22, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
 
             const matrixBody: any[] = [];
 
             currentLS.modules.forEach((mod, modIdx) => {
-                // 1. Module Title (with assessment + outcome inline)
+                // 1. Module Title Row (with assessment + outcome)
                 matrixBody.push([{
                     content: `Module ${modIdx + 1}: ${mod.title}`,
                     colSpan: 1 + activeModes.length + 1,
-                    styles: { fillColor: [220, 220, 220], fontStyle: 'bold' as const }
+                    styles: { fillColor: MODULE_BG, fontStyle: 'bold' as const, fontSize: 9 }
                 }, {
                     content: mod.assessmentMethods.join(', '),
-                    styles: { fillColor: [220, 220, 220], fontStyle: 'bold' as const, halign: 'center' as const, fontSize: 8 }
+                    styles: { fillColor: MODULE_BG, fontStyle: 'bold' as const, halign: 'center' as const, fontSize: 8 }
                 }, {
                     content: mod.learningOutcome || '',
-                    styles: { fillColor: [220, 220, 220], fontStyle: 'bold' as const, halign: 'center' as const, fontSize: 8 }
+                    styles: { fillColor: MODULE_BG, fontStyle: 'bold' as const, halign: 'center' as const, fontSize: 8 }
                 }]);
 
-                // 2. Headers
+                // 2. Mode label headers
                 const headerRow: any[] = [];
-                headerRow.push({ content: 'Content / Methods ->', styles: { fontStyle: 'italic' as const, halign: 'right' as const } });
+                headerRow.push({ content: 'Content Title', styles: { fontStyle: 'italic' as const, halign: 'right' as const, fillColor: HEADER_BG, fontSize: 7 } });
                 activeModes.forEach(mode => {
                     headerRow.push({
-                        content: DELIVERY_MODE_LABELS[mode].substring(0, 4) + '.',
-                        styles: { fontSize: 7, halign: 'center' as const, fontStyle: 'bold' as const, fillColor: [240, 240, 240] }
+                        content: DELIVERY_MODE_LABELS[mode],
+                        styles: { fontSize: 6, halign: 'center' as const, fontStyle: 'bold' as const, fillColor: HEADER_BG }
                     });
                 });
-                headerRow.push({ content: 'Duration', styles: { fontStyle: 'bold' as const, halign: 'center' as const } });
-                headerRow.push({ content: '', styles: {} });
-                headerRow.push({ content: '', styles: {} });
+                headerRow.push({ content: 'Duration', styles: { fontStyle: 'bold' as const, halign: 'center' as const, fillColor: HEADER_BG, fontSize: 7 } });
+                headerRow.push({ content: '', styles: { fillColor: HEADER_BG } });
+                headerRow.push({ content: '', styles: { fillColor: HEADER_BG } });
                 matrixBody.push(headerRow);
 
                 // 3. Objectives
+                let objectivesText = 'Related Learning Objectives: ';
+                if (mod.associatedObjectiveIds && mod.associatedObjectiveIds.length > 0) {
+                    objectivesText += mod.associatedObjectiveIds
+                        .map(id => {
+                            const o = currentLS.objectives.find(obj => obj.id === id);
+                            return o ? `(LObj: ${o.text})` : '';
+                        })
+                        .filter(Boolean)
+                        .join(', ');
+                } else {
+                    objectivesText += 'None';
+                }
                 matrixBody.push([{
-                    content: `Objectives: ${mod.associatedObjectiveIds.join(', ')}`,
+                    content: objectivesText,
                     colSpan: 1 + activeModes.length + 3,
-                    styles: { textColor: 100, fontSize: 8, fontStyle: 'italic' as const }
+                    styles: { textColor: [100, 100, 100], fontSize: 7, fontStyle: 'italic' as const }
                 }]);
 
-                // 4. Contents — each row has its own duration
+                // 4. Contents
                 if (mod.contents.length === 0) {
-                    const emptyRow: any[] = ['(None)'];
+                    const emptyRow: any[] = [{ content: '(No Content)', styles: { textColor: [150, 150, 150], fontStyle: 'italic' as const } }];
                     for (let i = 0; i < activeModes.length; i++) emptyRow.push('');
-                    emptyRow.push('0');
+                    emptyRow.push('');
                     emptyRow.push('');
                     emptyRow.push('');
                     matrixBody.push(emptyRow);
@@ -327,17 +362,20 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                     mod.contents.forEach((c, cIdx) => {
                         const createRow = (item: LSContent, label: string) => {
                             const row: any[] = [];
-                            row.push({ content: `${label} ${item.title}`, styles: { fontSize: 9 } });
+                            row.push({ content: `${label} ${item.title}`, styles: { fontSize: 8 } });
 
                             activeModes.forEach(mode => {
                                 if (item.deliveryModes.includes(mode)) {
+                                    const linkUrl = item.deliveryLinks[mode];
                                     row.push({
                                         content: '\u2713',
                                         styles: {
-                                            halign: 'center',
+                                            halign: 'center' as const,
                                             font: 'Roboto',
-                                            fontStyle: 'normal',
-                                            fontSize: 10
+                                            fontStyle: 'normal' as const,
+                                            fontSize: 12,
+                                            fillColor: CHECK_BG,
+                                            textColor: linkUrl ? [0, 0, 200] : [0, 0, 0],
                                         }
                                     });
                                 } else {
@@ -345,7 +383,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                 }
                             });
 
-                            row.push({ content: `${item.duration} min`, styles: { halign: 'center' as const } });
+                            row.push({ content: `${item.duration} min`, styles: { halign: 'center' as const, fontSize: 8 } });
                             row.push('');
                             row.push('');
                             return row;
@@ -355,7 +393,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
 
                         if (c.subContents) {
                             c.subContents.forEach((sub, sIdx) => {
-                                matrixBody.push(createRow(sub, `${modIdx + 1}.${cIdx + 1}.${sIdx + 1}`));
+                                matrixBody.push(createRow(sub, `  ${modIdx + 1}.${cIdx + 1}.${sIdx + 1}`));
                             });
                         }
                     });
@@ -364,35 +402,44 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
 
             const mainHead = [
                 [
-                    { content: 'CONTENT', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
+                    { content: 'MODULES', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
                     { content: 'DELIVERY MODES', colSpan: activeModes.length, styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
                     { content: 'DURATION', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
                     { content: 'ASSESSMENT', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
-                    { content: 'OUTCOME', styles: { halign: 'center' as const, fontStyle: 'bold' as const } }
+                    { content: 'LEARNING OUTCOMES', styles: { halign: 'center' as const, fontStyle: 'bold' as const } }
                 ]
             ];
 
             autoTable(doc, {
-                startY: 20,
+                startY: 28,
                 head: mainHead,
                 body: matrixBody,
                 theme: 'grid',
+                headStyles: {
+                    font: 'Roboto',
+                    fillColor: ITU_BLUE,
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    fontSize: 9,
+                    cellPadding: 3,
+                },
                 styles: {
                     font: 'Roboto',
                     fontSize: 8,
-                    lineWidth: 0.1,
-                    lineColor: 0,
-                    overflow: 'linebreak'
+                    lineWidth: 0.3,
+                    lineColor: [0, 0, 0],
+                    overflow: 'linebreak',
+                    cellPadding: 2,
                 },
                 columnStyles: {
-                    0: { cellWidth: 50 },
-                    [1 + activeModes.length]: { cellWidth: 18 }, // Duration
-                    [1 + activeModes.length + 1]: { cellWidth: 30 }, // Assessment
-                    [1 + activeModes.length + 2]: { cellWidth: 30 }, // Outcome
+                    0: { cellWidth: 45 },
+                    [1 + activeModes.length]: { cellWidth: 16 }, // Duration
+                    [1 + activeModes.length + 1]: { cellWidth: 28 }, // Assessment
+                    [1 + activeModes.length + 2]: { cellWidth: 28 }, // Outcome
                 },
                 didParseCell: (data) => {
                     if (data.section === 'body' && data.column.index > 0 && data.column.index <= activeModes.length) {
-                        data.cell.styles.cellWidth = 6;
+                        data.cell.styles.cellWidth = 7;
                     }
                 }
             });
@@ -501,9 +548,10 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                 <tr className="bg-slate-50 text-slate-600 text-[10px]">
                                     <td className="border border-black p-1 text-right italic">Content Title</td>
                                     {activeModes.map(mode => (
-                                        <td key={mode} className="border border-black p-1 text-center font-bold relative h-24">
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{DELIVERY_MODE_LABELS[mode]}</span>
+                                        <td key={mode} className="border border-black p-1 text-center font-bold relative h-28">
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                                                <span className="text-blue-600 flex-shrink-0">{DELIVERY_MODE_ICONS[mode]}</span>
+                                                <span className="text-[8px] leading-tight" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{DELIVERY_MODE_LABELS[mode]}</span>
                                             </div>
                                         </td>
                                     ))}

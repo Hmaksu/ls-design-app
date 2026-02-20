@@ -32,13 +32,16 @@ app.use(express.json({ limit: '10mb' }));
 // POST /api/auth/register
 app.post('/api/auth/register', (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, securityQuestion, securityAnswer } = req.body;
 
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'Name, email, and password are required' });
         }
         if (password.length < 6) {
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+        if (!securityQuestion || !securityAnswer) {
+            return res.status(400).json({ error: 'Security question and answer are required' });
         }
 
         const db = getDb();
@@ -49,11 +52,18 @@ app.post('/api/auth/register', (req, res) => {
         }
 
         const passwordHash = bcrypt.hashSync(password, 10);
-        const result = db.prepare(
-            'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)'
-        ).run(name, email, passwordHash);
+        const answerHash = bcrypt.hashSync(securityAnswer.toLowerCase().trim(), 10);
 
-        const user = { id: result.lastInsertRowid, name, email };
+        // First user becomes admin automatically
+        const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+        const adminEmail = process.env.ADMIN_EMAIL || '';
+        const role = (userCount === 0 || email === adminEmail) ? 'admin' : 'user';
+
+        const result = db.prepare(
+            'INSERT INTO users (name, email, password_hash, role, security_question, security_answer) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(name, email, passwordHash, role, securityQuestion, answerHash);
+
+        const user = { id: result.lastInsertRowid, name, email, role };
         const token = generateToken(user);
 
         res.status(201).json({ user, token });
@@ -79,10 +89,18 @@ app.post('/api/auth/login', (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        // Auto-promote if this email matches ADMIN_EMAIL
+        let role = user.role || 'user';
+        const adminEmail = process.env.ADMIN_EMAIL || '';
+        if (adminEmail && email === adminEmail && role !== 'admin') {
+            db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id);
+            role = 'admin';
+        }
+
         const token = generateToken({ id: user.id, name: user.name, email: user.email });
 
         res.json({
-            user: { id: user.id, name: user.name, email: user.email },
+            user: { id: user.id, name: user.name, email: user.email, role },
             token
         });
     } catch (err) {
@@ -94,11 +112,77 @@ app.post('/api/auth/login', (req, res) => {
 // GET /api/auth/me
 app.get('/api/auth/me', authMiddleware, (req, res) => {
     const db = getDb();
-    const user = db.prepare('SELECT id, name, email, created_at FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(req.user.id);
     if (!user) {
         return res.status(404).json({ error: 'User not found' });
     }
+    // Auto-promote if ADMIN_EMAIL matches
+    const adminEmail = process.env.ADMIN_EMAIL || '';
+    if (adminEmail && user.email === adminEmail && user.role !== 'admin') {
+        db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id);
+        user.role = 'admin';
+    }
     res.json({ user });
+});
+
+// POST /api/auth/forgot-password
+app.post('/api/auth/forgot-password', (req, res) => {
+    try {
+        const { email, securityAnswer, newPassword } = req.body;
+
+        if (!email || !securityAnswer || !newPassword) {
+            return res.status(400).json({ error: 'Email, security answer, and new password are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        }
+
+        const db = getDb();
+        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+
+        if (!user) {
+            return res.status(404).json({ error: 'No account found with that email' });
+        }
+
+        if (!user.security_answer) {
+            return res.status(400).json({ error: 'No security question set for this account' });
+        }
+
+        const isCorrect = bcrypt.compareSync(securityAnswer.toLowerCase().trim(), user.security_answer);
+        if (!isCorrect) {
+            return res.status(401).json({ error: 'Incorrect security answer' });
+        }
+
+        const newPasswordHash = bcrypt.hashSync(newPassword, 10);
+        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newPasswordHash, user.id);
+
+        res.json({ success: true, message: 'Password has been reset successfully' });
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/auth/get-security-question — get the security question for an email
+app.post('/api/auth/get-security-question', (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+
+        const db = getDb();
+        const user = db.prepare('SELECT security_question FROM users WHERE email = ?').get(email);
+
+        if (!user || !user.security_question) {
+            return res.status(404).json({ error: 'No account found with that email' });
+        }
+
+        res.json({ securityQuestion: user.security_question });
+    } catch (err) {
+        console.error('Get security question error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // ═══════════════════════════════════════════
@@ -414,8 +498,20 @@ app.post('/api/contact', async (req, res) => {
     }
 });
 
-// Admin: view all contact messages (requires auth)
-app.get('/api/admin/messages', authMiddleware, (req, res) => {
+// ═══════════════════════════════════════════
+// ADMIN MIDDLEWARE
+// ═══════════════════════════════════════════
+function adminMiddleware(req, res, next) {
+    const db = getDb();
+    const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.user.id);
+    if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+}
+
+// Admin: view all contact messages
+app.get('/api/admin/messages', authMiddleware, adminMiddleware, (req, res) => {
     try {
         const db = getDb();
         const messages = db.prepare(
@@ -427,6 +523,117 @@ app.get('/api/admin/messages', authMiddleware, (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+// Admin: list all users
+app.get('/api/admin/users', authMiddleware, adminMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const users = db.prepare(`
+            SELECT u.id, u.name, u.email, u.role, u.created_at,
+                   (SELECT COUNT(*) FROM learning_stations WHERE user_id = u.id) as station_count
+            FROM users u
+            ORDER BY u.created_at DESC
+        `).all();
+        res.json({ users });
+    } catch (err) {
+        console.error('Admin users error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Admin: list all stations with owner info
+app.get('/api/admin/stations', authMiddleware, adminMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const stations = db.prepare(`
+            SELECT ls.id, ls.title, ls.code, ls.created_at, ls.updated_at,
+                   u.id as owner_id, u.name as owner_name, u.email as owner_email
+            FROM learning_stations ls
+            JOIN users u ON ls.user_id = u.id
+            ORDER BY ls.updated_at DESC
+        `).all();
+
+        const enriched = stations.map(s => {
+            try {
+                const full = db.prepare('SELECT data FROM learning_stations WHERE id = ?').get(s.id);
+                const parsed = JSON.parse(full.data);
+                return { ...s, moduleCount: parsed.modules?.length || 0, level: parsed.level || '' };
+            } catch {
+                return { ...s, moduleCount: 0, level: '' };
+            }
+        });
+
+        res.json({ stations: enriched });
+    } catch (err) {
+        console.error('Admin stations error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Admin: get collaborators for any station
+app.get('/api/admin/stations/:id/collaborators', authMiddleware, adminMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const station = db.prepare('SELECT id FROM learning_stations WHERE id = ?').get(req.params.id);
+        if (!station) {
+            return res.status(404).json({ error: 'Station not found' });
+        }
+        const collaborators = db.prepare(`
+            SELECT u.id, u.name, u.email, sc.added_at
+            FROM station_collaborators sc
+            JOIN users u ON sc.user_id = u.id
+            WHERE sc.station_id = ?
+        `).all(req.params.id);
+        res.json({ collaborators });
+    } catch (err) {
+        console.error('Admin get collaborators error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Admin: add collaborator to any station
+app.post('/api/admin/stations/:id/share', authMiddleware, adminMiddleware, (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+        const db = getDb();
+        const station = db.prepare('SELECT id, user_id FROM learning_stations WHERE id = ?').get(req.params.id);
+        if (!station) {
+            return res.status(404).json({ error: 'Station not found' });
+        }
+        const targetUser = db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(email);
+        if (!targetUser) {
+            return res.status(404).json({ error: 'No user found with that email' });
+        }
+        if (targetUser.id === station.user_id) {
+            return res.status(400).json({ error: 'Cannot share with the owner' });
+        }
+        const existing = db.prepare('SELECT * FROM station_collaborators WHERE station_id = ? AND user_id = ?').get(req.params.id, targetUser.id);
+        if (existing) {
+            return res.status(409).json({ error: 'Already shared with this user' });
+        }
+        db.prepare('INSERT INTO station_collaborators (station_id, user_id) VALUES (?, ?)').run(req.params.id, targetUser.id);
+        res.json({ success: true, collaborator: { id: targetUser.id, name: targetUser.name, email: targetUser.email } });
+    } catch (err) {
+        console.error('Admin share error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Admin: remove collaborator from any station
+app.delete('/api/admin/stations/:id/share/:userId', authMiddleware, adminMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        db.prepare('DELETE FROM station_collaborators WHERE station_id = ? AND user_id = ?').run(req.params.id, parseInt(req.params.userId));
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Admin remove collaborator error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // ═══════════════════════════════════════════
 // SERVE FRONTEND (Production)
 // ═══════════════════════════════════════════

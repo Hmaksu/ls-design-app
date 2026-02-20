@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
     Plus, FolderOpen, Trash2, Clock, Layers, BookOpen,
-    Search, LogOut, User, Loader2, AlertCircle, Share2, Users, X, UserPlus, UserMinus, MessageSquare, Inbox
+    Search, LogOut, User, Loader2, AlertCircle, Share2, Users, X, UserPlus, UserMinus, MessageSquare, Shield
 } from 'lucide-react';
 import {
     getStations, deleteStation, StationSummary,
     shareStation, getCollaborators, removeCollaborator, Collaborator
 } from '../services/authService';
 import { ContactForm } from './ContactForm';
-import { AdminMessages } from './AdminMessages';
+import { AdminPanel } from './AdminPanel';
 
 interface DashboardProps {
-    user: { id: number; name: string; email: string };
+    user: { id: number; name: string; email: string; role?: string };
     onCreateNew: () => void;
     onOpenStation: (id: string) => void;
     onLogout: () => void;
@@ -32,7 +32,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
     const [collabLoading, setCollabLoading] = useState(false);
     const [showContactForm, setShowContactForm] = useState(false);
-    const [showAdminMessages, setShowAdminMessages] = useState(false);
+    const [showAdminPanel, setShowAdminPanel] = useState(false);
 
     useEffect(() => { loadStations(); }, []);
 
@@ -134,14 +134,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <MessageSquare className="w-4 h-4" />
                             <span className="text-sm font-medium">Feedback</span>
                         </button>
-                        <button
-                            onClick={() => setShowAdminMessages(true)}
-                            className="flex items-center space-x-1 px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                            title="View Messages"
-                        >
-                            <Inbox className="w-4 h-4" />
-                            <span className="text-sm font-medium">Inbox</span>
-                        </button>
+                        {user.role === 'admin' && (
+                            <button
+                                onClick={() => setShowAdminPanel(true)}
+                                className="flex items-center space-x-1 px-3 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="Admin Panel"
+                            >
+                                <Shield className="w-4 h-4" />
+                                <span className="text-sm font-medium">Admin</span>
+                            </button>
+                        )}
                         <div className="flex items-center space-x-2 bg-slate-100 px-3 py-2 rounded-lg">
                             <User className="w-4 h-4 text-slate-500" />
                             <span className="text-sm text-slate-700 font-medium">{user.email}</span>
@@ -362,9 +364,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                 />
             )}
 
-            {/* ═══ Admin Messages Modal ═══ */}
-            {showAdminMessages && (
-                <AdminMessages onClose={() => setShowAdminMessages(false)} />
+            {/* ═══ Admin Panel Modal ═══ */}
+            {showAdminPanel && (
+                <AdminPanel onClose={() => setShowAdminPanel(false)} />
             )}
         </div>
     );

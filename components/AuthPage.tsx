@@ -1,45 +1,73 @@
 import React, { useState } from 'react';
-import { Layers, Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
-import { register, login } from '../services/authService';
+import { Layers, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, ShieldQuestion, KeyRound, ArrowLeft, CheckCircle } from 'lucide-react';
+import { register, login, getSecurityQuestion, resetPassword } from '../services/authService';
+
+const SECURITY_QUESTIONS = [
+    'What was the name of your first pet?',
+    'What city were you born in?',
+    'What is your mother\'s maiden name?',
+    'What was the name of your first school?',
+    'What is your favorite book?',
+    'What was the make of your first car?',
+    'What is your favorite movie?',
+    'What street did you grow up on?',
+];
 
 interface AuthPageProps {
-    onAuthSuccess: (user: { id: number; name: string; email: string }) => void;
+    onAuthSuccess: (user: { id: number; name: string; email: string; role: string }) => void;
 }
 
+type AuthMode = 'login' | 'register' | 'forgot' | 'forgot-answer';
+
 export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
-    const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+    const [mode, setMode] = useState<AuthMode>('login');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     // Form fields
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [securityQuestion, setSecurityQuestion] = useState(SECURITY_QUESTIONS[0]);
+    const [securityAnswer, setSecurityAnswer] = useState('');
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // Forgot password fields
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [fetchedQuestion, setFetchedQuestion] = useState('');
+    const [forgotAnswer, setForgotAnswer] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+    const resetFields = () => {
+        setError('');
+        setSuccess('');
+        setName('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setSecurityQuestion(SECURITY_QUESTIONS[0]);
+        setSecurityAnswer('');
+        setForgotEmail('');
+        setFetchedQuestion('');
+        setForgotAnswer('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+    };
+
+    const switchMode = (m: AuthMode) => {
+        resetFields();
+        setMode(m);
+    };
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
-
         try {
-            if (activeTab === 'register') {
-                if (password !== confirmPassword) {
-                    setError('Passwords do not match');
-                    setLoading(false);
-                    return;
-                }
-                if (password.length < 6) {
-                    setError('Password must be at least 6 characters');
-                    setLoading(false);
-                    return;
-                }
-                const data = await register(name, email, password);
-                onAuthSuccess(data.user);
-            } else {
-                const data = await login(email, password);
-                onAuthSuccess(data.user);
-            }
+            const data = await login(email, password);
+            onAuthSuccess(data.user);
         } catch (err: any) {
             setError(err.message || 'An error occurred');
         } finally {
@@ -47,14 +75,76 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         }
     };
 
-    const switchTab = (tab: 'login' | 'register') => {
-        setActiveTab(tab);
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
         setError('');
-        setName('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
+        setLoading(true);
+        try {
+            if (password !== confirmPassword) {
+                setError('Passwords do not match');
+                setLoading(false);
+                return;
+            }
+            if (password.length < 6) {
+                setError('Password must be at least 6 characters');
+                setLoading(false);
+                return;
+            }
+            if (!securityAnswer.trim()) {
+                setError('Security answer is required');
+                setLoading(false);
+                return;
+            }
+            const data = await register(name, email, password, securityQuestion, securityAnswer);
+            onAuthSuccess(data.user);
+        } catch (err: any) {
+            setError(err.message || 'An error occurred');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const handleForgotStep1 = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            const data = await getSecurityQuestion(forgotEmail);
+            setFetchedQuestion(data.securityQuestion);
+            setMode('forgot-answer');
+        } catch (err: any) {
+            setError(err.message || 'An error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleForgotStep2 = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            if (newPassword !== confirmNewPassword) {
+                setError('Passwords do not match');
+                setLoading(false);
+                return;
+            }
+            if (newPassword.length < 6) {
+                setError('Password must be at least 6 characters');
+                setLoading(false);
+                return;
+            }
+            await resetPassword(forgotEmail, forgotAnswer, newPassword);
+            setSuccess('Password has been reset! You can now sign in.');
+            setTimeout(() => switchMode('login'), 2000);
+        } catch (err: any) {
+            setError(err.message || 'An error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const inputClass = "w-full bg-white/[0.07] border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm";
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 px-4">
@@ -79,104 +169,172 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
             {/* Auth Card */}
             <div className="w-full max-w-md relative z-10">
                 <div className="bg-white/[0.07] backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl shadow-black/20 overflow-hidden">
-                    {/* Tab Switcher */}
-                    <div className="flex border-b border-white/10">
-                        <button
-                            onClick={() => switchTab('login')}
-                            className={`flex-1 py-4 text-sm font-semibold tracking-wide transition-all ${activeTab === 'login'
-                                ? 'text-cyan-400 border-b-2 border-cyan-400 bg-white/5'
-                                : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.03]'
-                                }`}
-                        >
-                            Sign In
-                        </button>
-                        <button
-                            onClick={() => switchTab('register')}
-                            className={`flex-1 py-4 text-sm font-semibold tracking-wide transition-all ${activeTab === 'register'
-                                ? 'text-cyan-400 border-b-2 border-cyan-400 bg-white/5'
-                                : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.03]'
-                                }`}
-                        >
-                            Register
-                        </button>
-                    </div>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="p-8 space-y-5">
+                    {/* Tab Switcher (only for login/register) */}
+                    {(mode === 'login' || mode === 'register') && (
+                        <div className="flex border-b border-white/10">
+                            <button
+                                onClick={() => switchMode('login')}
+                                className={`flex-1 py-4 text-sm font-semibold tracking-wide transition-all ${mode === 'login'
+                                    ? 'text-cyan-400 border-b-2 border-cyan-400 bg-white/5'
+                                    : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.03]'
+                                    }`}
+                            >
+                                Sign In
+                            </button>
+                            <button
+                                onClick={() => switchMode('register')}
+                                className={`flex-1 py-4 text-sm font-semibold tracking-wide transition-all ${mode === 'register'
+                                    ? 'text-cyan-400 border-b-2 border-cyan-400 bg-white/5'
+                                    : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.03]'
+                                    }`}
+                            >
+                                Register
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Forgot Password Header */}
+                    {(mode === 'forgot' || mode === 'forgot-answer') && (
+                        <div className="flex items-center border-b border-white/10 px-6 py-4">
+                            <button onClick={() => switchMode('login')} className="text-slate-400 hover:text-white mr-3 transition-colors">
+                                <ArrowLeft className="w-5 h-5" />
+                            </button>
+                            <h2 className="text-sm font-semibold text-white tracking-wide">Reset Password</h2>
+                        </div>
+                    )}
+
+                    {/* Error & Success */}
+                    <div className="px-8 pt-6">
                         {error && (
-                            <div className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl text-sm">
+                            <div className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl text-sm mb-4">
                                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                                 <span>{error}</span>
                             </div>
                         )}
-
-                        {activeTab === 'register' && (
-                            <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input
-                                    type="text"
-                                    placeholder="Full Name"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required
-                                    className="w-full bg-white/[0.07] border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
-                                />
+                        {success && (
+                            <div className="flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-4 py-3 rounded-xl text-sm mb-4">
+                                <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                                <span>{success}</span>
                             </div>
                         )}
+                    </div>
 
-                        <div className="relative">
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                            <input
-                                type="email"
-                                placeholder="Email Address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                className="w-full bg-white/[0.07] border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
-                            />
-                        </div>
-
-                        <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                            <input
-                                type="password"
-                                placeholder="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="w-full bg-white/[0.07] border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
-                            />
-                        </div>
-
-                        {activeTab === 'register' && (
+                    {/* ═══ LOGIN FORM ═══ */}
+                    {mode === 'login' && (
+                        <form onSubmit={handleLogin} className="px-8 pb-8 space-y-5">
+                            <div className="relative">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
+                            </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input
-                                    type="password"
-                                    placeholder="Confirm Password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    required
-                                    className="w-full bg-white/[0.07] border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm"
-                                />
+                                <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
                             </div>
-                        )}
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
-                        >
-                            {loading ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <>
-                                    <span>{activeTab === 'login' ? 'Sign In' : 'Create Account'}</span>
-                                    <ArrowRight className="w-4 h-4" />
-                                </>
-                            )}
-                        </button>
-                    </form>
+                            <button type="submit" disabled={loading}
+                                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
+                            >
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>}
+                            </button>
+
+                            <button type="button" onClick={() => switchMode('forgot')} className="w-full text-center text-xs text-slate-400 hover:text-cyan-400 transition-colors pt-1">
+                                Forgot your password?
+                            </button>
+                        </form>
+                    )}
+
+                    {/* ═══ REGISTER FORM ═══ */}
+                    {mode === 'register' && (
+                        <form onSubmit={handleRegister} className="px-8 pb-8 space-y-4">
+                            <div className="relative">
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} />
+                            </div>
+                            <div className="relative">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
+                            </div>
+                            <div className="relative">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
+                            </div>
+                            <div className="relative">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className={inputClass} />
+                            </div>
+
+                            {/* Security Question */}
+                            <div className="border-t border-white/10 pt-4 mt-2">
+                                <p className="text-xs text-slate-400 mb-3 flex items-center">
+                                    <ShieldQuestion className="w-4 h-4 mr-1.5 text-cyan-400" />
+                                    Security question (for password recovery)
+                                </p>
+                                <select
+                                    value={securityQuestion}
+                                    onChange={(e) => setSecurityQuestion(e.target.value)}
+                                    className="w-full bg-white/[0.07] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all mb-3 appearance-none"
+                                >
+                                    {SECURITY_QUESTIONS.map(q => (
+                                        <option key={q} value={q} className="bg-slate-800 text-white">{q}</option>
+                                    ))}
+                                </select>
+                                <div className="relative">
+                                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                    <input type="text" placeholder="Your answer" value={securityAnswer} onChange={(e) => setSecurityAnswer(e.target.value)} required className={inputClass} />
+                                </div>
+                            </div>
+
+                            <button type="submit" disabled={loading}
+                                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
+                            >
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Create Account</span><ArrowRight className="w-4 h-4" /></>}
+                            </button>
+                        </form>
+                    )}
+
+                    {/* ═══ FORGOT STEP 1: Enter Email ═══ */}
+                    {mode === 'forgot' && (
+                        <form onSubmit={handleForgotStep1} className="px-8 pb-8 space-y-5">
+                            <p className="text-sm text-slate-400">Enter your email address and we'll show your security question.</p>
+                            <div className="relative">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="email" placeholder="Email Address" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required className={inputClass} />
+                            </div>
+                            <button type="submit" disabled={loading}
+                                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
+                            >
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Continue</span><ArrowRight className="w-4 h-4" /></>}
+                            </button>
+                        </form>
+                    )}
+
+                    {/* ═══ FORGOT STEP 2: Answer + New Password ═══ */}
+                    {mode === 'forgot-answer' && (
+                        <form onSubmit={handleForgotStep2} className="px-8 pb-8 space-y-4">
+                            <div className="bg-white/[0.05] border border-white/10 rounded-xl p-4">
+                                <p className="text-xs text-slate-400 mb-1">Your security question:</p>
+                                <p className="text-sm text-cyan-300 font-medium">{fetchedQuestion}</p>
+                            </div>
+                            <div className="relative">
+                                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="text" placeholder="Your answer" value={forgotAnswer} onChange={(e) => setForgotAnswer(e.target.value)} required className={inputClass} />
+                            </div>
+                            <div className="relative">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className={inputClass} />
+                            </div>
+                            <div className="relative">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <input type="password" placeholder="Confirm New Password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required className={inputClass} />
+                            </div>
+                            <button type="submit" disabled={loading}
+                                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
+                            >
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Reset Password</span><ArrowRight className="w-4 h-4" /></>}
+                            </button>
+                        </form>
+                    )}
                 </div>
 
                 <p className="text-center text-slate-500 text-xs mt-6">
