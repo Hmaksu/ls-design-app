@@ -8,25 +8,46 @@ export enum BloomLevel {
 }
 
 export enum DeliveryModeType {
-  READING = 'Reading',
-  VIDEO = 'Video',
-  SURVEY = 'Survey',
-  CASE_STUDY = 'Case Study',
-  INTERVIEW = 'Interview',
-  DISCUSSION = 'Discussion',
-  PRESENTATION = 'Presentation',
-  TEAMWORK = 'Teamwork',
-  ROLE_PLAYING = 'Role Playing',
-  STORYTELLING = 'Storytelling',
-  GUEST_SPEAKER = 'Guest Speaker',
-  PODCAST = 'Podcast',
-  HANDS_ON = 'Hands-on Exercise',
-  SITE_VISIT = 'Site Visit',
-  LAB_WORK = 'Lab Work',
-  SOFTWARE = 'Software',
-  GAME = 'Game/Gamification',
-  VR = 'Virtual Reality',
-  AI = 'Artificial Intelligence',
+  AI = 'AI',
+  ANIMATION = 'ANIMATION',
+  APPLICATION = 'APPLICATION',
+  ASSESSMENT = 'ASSESSMENT',
+  CASE_STUDY = 'CASE_STUDY',
+  CATALOG = 'CATALOG',
+  CHECKLIST = 'CHECKLIST',
+  DATA_POINTS = 'DATA_POINTS',
+  DATA_SET = 'DATA_SET',
+  DISCUSSION = 'DISCUSSION',
+  FACILITATION = 'FACILITATION',
+  FILM_VIDEO = 'FILM_VIDEO',
+  FLOWCHART = 'FLOWCHART',
+  GAMIFICATION = 'GAMIFICATION',
+  GUEST_SPEAKER = 'GUEST_SPEAKER',
+  HANDS_ON = 'HANDS_ON',
+  INFOGRAPHIC = 'INFOGRAPHIC',
+  INTERVIEW = 'INTERVIEW',
+  KINESTHETIC = 'KINESTHETIC',
+  LAB_WORK = 'LAB_WORK',
+  MENTORING = 'MENTORING',
+  MUSIC = 'MUSIC',
+  ONLINE_REMOTE = 'ONLINE_REMOTE',
+  PMP_EXAM = 'PMP_EXAM',
+  PMI_CONTENT = 'PMI_CONTENT',
+  PODCAST = 'PODCAST',
+  READING = 'READING',
+  REALITY = 'REALITY',
+  REFLECTION = 'REFLECTION',
+  ROLE_PLAYING = 'ROLE_PLAYING',
+  SAMPLE = 'SAMPLE',
+  SCENT = 'SCENT',
+  SITE_VISIT = 'SITE_VISIT',
+  SOCIAL_MEDIA = 'SOCIAL_MEDIA',
+  SOFTWARE = 'SOFTWARE',
+  STORYTELLING = 'STORYTELLING',
+  SURVEY = 'SURVEY',
+  TEAMWORK = 'TEAMWORK',
+  TEMPLATE = 'TEMPLATE',
+  VR = 'VR',
   OTHER = 'Other'
 }
 
@@ -49,7 +70,7 @@ export interface LSContent {
 export interface LSModule {
   id: string;
   title: string;
-  contents: LSContent[]; 
+  contents: LSContent[];
   associatedObjectiveIds: string[]; // IDs of Global LearningObjectives
   learningOutcome: string; // Module specific outcome
   bloomLevel: BloomLevel;
@@ -65,25 +86,25 @@ export interface LearningStation {
   finalRevisionDate: string;
   ects: string;
   title: string;
-  
+
   // --- Content ---
   subject: string;
   keywords: string;
   level: 'Basic' | 'Intermediate' | 'Advanced';
   targetAudience: string;
   description: string; // Short description
-  
+
   // --- Objectives & Outcomes ---
   objectives: LearningObjective[]; // LObjs
   globalLearningOutcomes: string; // LOs (Global textual description)
   relatedSDGs: string; // Text field for SDGs
-  
+
   // --- Assessment & Logistics ---
   globalAssessmentMethods: string; // Description of assessment methods
   calendar: string; // Implementation calendar
   durationInPerson: string; // hours
   durationDigital: string; // hours
-  
+
   // --- Requirements ---
   prerequisites: string;
   specialNeeds: string;
