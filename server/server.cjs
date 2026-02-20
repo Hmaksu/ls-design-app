@@ -452,8 +452,8 @@ app.get('/api/admin/messages', authMiddleware, (req, res) => {
 const distPath = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {
     app.use(express.static(distPath));
-    // SPA fallback: all non-API routes serve index.html
-    app.get('*', (req, res) => {
+    // SPA fallback: all non-API routes serve index.html (Express v5 syntax)
+    app.get('{*path}', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
     });
     console.log('📁 Serving frontend from', distPath);
