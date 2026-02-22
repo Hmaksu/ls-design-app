@@ -8,6 +8,8 @@ export enum BloomLevel {
 }
 
 export enum DeliveryModeType {
+  PRESANTATION = 'PRESENTATION',
+  READING = 'READING',
   AI = 'AI',
   ANIMATION = 'ANIMATION',
   APPLICATION = 'APPLICATION',
@@ -34,7 +36,6 @@ export enum DeliveryModeType {
   PMP_EXAM = 'PMP_EXAM',
   PMI_CONTENT = 'PMI_CONTENT',
   PODCAST = 'PODCAST',
-  READING = 'READING',
   REALITY = 'REALITY',
   REFLECTION = 'REFLECTION',
   ROLE_PLAYING = 'ROLE_PLAYING',
