@@ -8,7 +8,7 @@ export enum BloomLevel {
 }
 
 export enum DeliveryModeType {
-  PRESANTATION = 'PRESENTATION',
+  PRESENTATION = 'PRESENTATION',
   READING = 'READING',
   AI = 'AI',
   ANIMATION = 'ANIMATION',
