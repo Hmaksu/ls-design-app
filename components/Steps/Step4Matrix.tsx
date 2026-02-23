@@ -1,8 +1,6 @@
 import React, { useMemo } from 'react';
 import { LSContextType, LSContent, DeliveryModeType } from '../../types';
-import { FileDown, Loader2, FileCode, FileText } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { FileDown, Loader2, FileCode, FileText, Printer } from 'lucide-react';
 import { DELIVERY_MODE_LABELS, DELIVERY_MODE_ICONS } from '../../constants';
 
 // Fetch Roboto font at runtime from Google CDN and convert to base64
@@ -30,21 +28,31 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
     const { currentLS } = context;
     const [downloading, setDownloading] = React.useState(false);
 
-    // --- 1. Dynamic Modes Logic ---
-    // Filter modes that are actually used in the content
-    const activeModes = useMemo(() => {
+    // --- 1. Dynamic Modes Logic (Per Module) ---
+    const getActiveModesForModule = (mod: any) => {
         const used = new Set<DeliveryModeType>();
-        currentLS.modules.forEach(mod => {
-            mod.contents.forEach(c => {
-                c.deliveryModes.forEach(m => used.add(m));
-                if (c.subContents) {
-                    c.subContents.forEach(s => s.deliveryModes.forEach(m => used.add(m)));
-                }
-            });
+        mod.contents.forEach((c: any) => {
+            c.deliveryModes.forEach((m: DeliveryModeType) => used.add(m));
+            if (c.subContents) {
+                c.subContents.forEach((s: any) => s.deliveryModes.forEach((m: DeliveryModeType) => used.add(m)));
+            }
         });
+
+        const usedArray = ALL_MODES_REF.filter(m => used.has(m));
+
+        if (usedArray.length >= 5) {
+            return usedArray;
+        }
+
+        // We need padding up to 5. Get unused ones and pick random ones to fill the gap.
+        const unusedArray = ALL_MODES_REF.filter(m => !used.has(m));
+        const shuffledUnused = [...unusedArray].sort(() => 0.5 - Math.random());
+        const needed = 5 - usedArray.length;
+        const paddedArray = [...usedArray, ...shuffledUnused.slice(0, needed)];
+
         // Return sorted based on original order
-        return ALL_MODES_REF.filter(m => used.has(m));
-    }, [currentLS]);
+        return ALL_MODES_REF.filter(m => paddedArray.includes(m));
+    };
 
     // --- Helper: Info Table Data ---
     const getInfoTableData = () => {
@@ -75,20 +83,15 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
 
     // --- HTML Generator Helper ---
     const generateHtmlContent = () => {
-        // Generate headers for the modes
-        const modeHeaders = activeModes.map(mode =>
-            `<th class="center" style="font-size: 9px; padding: 2px; writing-mode: vertical-rl; transform: rotate(180deg);">${DELIVERY_MODE_LABELS[mode]}</th>`
-        ).join('');
-
         const infoRows = getInfoTableData().map(([label, value]) => `
         <tr>
             <td style="background-color: #f9f9f9; font-weight: bold; width: 30%;">${label}</td>
             <td>${typeof value === 'string' ? value.replace(/\n/g, '<br>') : value}</td>
         </tr>
-    `).join('');
+        `).join('');
 
         let html = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
     <head>
         <meta charset="UTF-8">
         <title>LS Design - ${currentLS.code}</title>
@@ -126,28 +129,35 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
         </table>
 
         <h2>LS MATRIX</h2>
-        <!-- Table 2 (Matrix) -->
-        <table>
-            <!-- Define Column Widths roughly -->
-            <col style="width: 15%"> <!-- Title -->
-            ${activeModes.map(() => `<col style="width: 2.5%">`).join('')} 
-            <col style="width: 5%"> <!-- Duration -->
-            <col style="width: 15%"> <!-- Assessment -->
-            <col style="width: 15%"> <!-- Outcomes -->
-
-            <thead>
-                <tr>
-                    <th>MODULES</th>
-                    <th colspan="${activeModes.length}">DELIVERY MODES</th>
-                    <th>Duration</th>
-                    <th>Assessment</th>
-                    <th>LEARNING OUTCOMES</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+        `;
 
         currentLS.modules.forEach((mod, modIdx) => {
+            const activeModes = getActiveModesForModule(mod);
+            const modeHeaders = activeModes.map(mode =>
+                `<th class="center" style="font-size: 9px; padding: 2px; writing-mode: vertical-rl; transform: rotate(180deg);">${DELIVERY_MODE_LABELS[mode]}</th>`
+            ).join('');
+
+            html += `
+            <!-- Table for Module ${modIdx + 1} -->
+            <table>
+                <col style="width: 15%"> <!-- Title -->
+                ${activeModes.map(() => `<col style="width: 2.5%">`).join('')} 
+                <col style="width: 5%"> <!-- Duration -->
+                <col style="width: 15%"> <!-- Assessment -->
+                <col style="width: 15%"> <!-- Outcomes -->
+
+                <thead>
+                    <tr>
+                        <th>MODULE ${modIdx + 1}</th>
+                        <th colspan="${activeModes.length}">DELIVERY MODES</th>
+                        <th>Duration</th>
+                        <th>Assessment</th>
+                        <th>Learning Outcomes</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
             // 1. Module Title Row (with assessment + outcome inline)
             html += `
             <tr class="module-row">
@@ -155,20 +165,20 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                 <td style="background-color: #e6e6e6; font-weight: bold; text-align: center;">${mod.assessmentMethods?.join(', ') || ''}</td>
                 <td style="background-color: #e6e6e6; font-weight: bold; text-align: center;">${mod.learningOutcome || ''}</td>
             </tr>
-        `;
+            `;
 
-            // 2. Sub-Headers
+            // 1.5 Sub-Headers (now repeated per module)
             html += `
             <tr class="mode-header-row">
                 <td class="center"><i>Content Title</i></td>
                 ${modeHeaders}
                 <td class="center"><i>Duration</i></td>
-                <td class="center"><i></i></td>
-                <td class="center"><i></i></td>
+                <td class="center"><i>Assessment</i></td>
+                <td class="center"><i>Outcomes</i></td>
             </tr>
-        `;
+            `;
 
-            // 3. Objectives
+            // 2. Objectives
             let objectivesText = 'Related Learning Objectives: ';
             if (mod.associatedObjectiveIds && mod.associatedObjectiveIds.length > 0) {
                 objectivesText += mod.associatedObjectiveIds
@@ -185,12 +195,21 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
             <tr>
                 <td colspan="${1 + activeModes.length + 3}" class="italic">${objectivesText}</td>
             </tr>
-        `;
+            `;
 
-            // 4. Contents — each row has its own duration
+            // 3. Contents — each row has its own duration
             if (mod.contents.length === 0) {
                 html += `<tr><td colspan="${activeModes.length + 4}">(No Content)</td></tr>`;
             } else {
+                // Calculate total rows for rowSpan
+                let totalRows = 0;
+                mod.contents.forEach(c => {
+                    totalRows++;
+                    if (c.subContents) totalRows += c.subContents.length;
+                });
+
+                let isFirstContentRow = true;
+
                 const createRowHtml = (item: LSContent, label: string) => {
                     let row = `<tr>`;
                     row += `<td>${label} ${item.title}</td>`;
@@ -201,15 +220,20 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                         if (hasMode) {
                             const linkUrl = item.deliveryLinks[mode];
                             cellContent = linkUrl
-                                ? `<a href="${linkUrl}"><b>&#10003;</b></a>`
+                                ? `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer"><b>&#10003;</b></a>`
                                 : `<b>&#10003;</b>`;
                         }
                         row += `<td class="center check" style="background-color: ${hasMode ? '#e6f3ff' : 'transparent'}">${cellContent}</td>`;
                     });
 
                     row += `<td class="center">${item.duration} min</td>`;
-                    row += `<td></td>`;
-                    row += `<td></td>`;
+
+                    if (isFirstContentRow) {
+                        row += `<td rowspan="${totalRows}" class="center">${mod.assessmentMethods?.join(', ') || ''}</td>`;
+                        row += `<td rowspan="${totalRows}" class="center">${mod.learningOutcome || ''}</td>`;
+                        isFirstContentRow = false;
+                    }
+
                     row += `</tr>`;
                     return row;
                 };
@@ -223,235 +247,26 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                     }
                 });
             }
+
+            html += `
+                </tbody>
+            </table>
+            `;
         });
 
         html += `
-            </tbody>
-        </table>
     </body>
     </html>
     `;
         return html;
     };
 
-    // --- PDF Generator ---
-    const downloadPDF = async () => {
-        setDownloading(true);
-
-        try {
-            // Landscape A4
-            const doc = new jsPDF('l', 'mm', 'a4');
-
-            // Register Roboto font for Turkish character support (fetched from CDN)
-            const robotoBase64 = await getRobotoBase64();
-            doc.addFileToVFS('Roboto-Regular.ttf', robotoBase64);
-            doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-            doc.setFont('Roboto');
-
-            const ITU_BLUE: [number, number, number] = [0, 38, 100]; // #002664
-            const HEADER_BG: [number, number, number] = [242, 242, 242];
-            const MODULE_BG: [number, number, number] = [230, 230, 230];
-            const CHECK_BG: [number, number, number] = [230, 243, 255];
-
-            // --- PAGE 1: INFORMATION TABLE (Portrait for better readability) ---
-            doc.setFontSize(18);
-            doc.setTextColor(...ITU_BLUE);
-            doc.text('LEARNING STATION DESIGN', 148, 18, { align: 'center' });
-            doc.setFontSize(13);
-            doc.text('INFORMATION TABLE', 148, 27, { align: 'center' });
-            doc.setTextColor(0, 0, 0);
-
-            const infoTableBody = getInfoTableData();
-
-            autoTable(doc, {
-                startY: 33,
-                head: [['Field', 'Value']],
-                body: infoTableBody,
-                theme: 'grid',
-                headStyles: {
-                    font: 'Roboto',
-                    fillColor: ITU_BLUE,
-                    textColor: [255, 255, 255],
-                    fontStyle: 'bold',
-                    fontSize: 10,
-                    cellPadding: 4,
-                    halign: 'center',
-                },
-                styles: {
-                    font: 'Roboto',
-                    fontSize: 9,
-                    cellPadding: 3,
-                    lineWidth: 0.3,
-                    lineColor: [0, 0, 0],
-                    overflow: 'linebreak',
-                },
-                columnStyles: {
-                    0: { fontStyle: 'bold', cellWidth: 65, fillColor: HEADER_BG },
-                    1: { cellWidth: 'auto' }
-                },
-                pageBreak: 'auto'
-            });
-
-            // --- PAGE 2: MATRIX ---
-            doc.addPage('a4', 'landscape');
-            doc.setFontSize(18);
-            doc.setTextColor(...ITU_BLUE);
-            doc.text('LEARNING STATION DESIGN', 148, 14, { align: 'center' });
-            doc.setFontSize(13);
-            doc.text('LS MATRIX', 148, 22, { align: 'center' });
-            doc.setTextColor(0, 0, 0);
-
-            const matrixBody: any[] = [];
-
-            currentLS.modules.forEach((mod, modIdx) => {
-                // 1. Module Title Row (with assessment + outcome)
-                matrixBody.push([{
-                    content: `Module ${modIdx + 1}: ${mod.title}`,
-                    colSpan: 1 + activeModes.length + 1,
-                    styles: { fillColor: MODULE_BG, fontStyle: 'bold' as const, fontSize: 9 }
-                }, {
-                    content: mod.assessmentMethods.join(', '),
-                    styles: { fillColor: MODULE_BG, fontStyle: 'bold' as const, halign: 'center' as const, fontSize: 8 }
-                }, {
-                    content: mod.learningOutcome || '',
-                    styles: { fillColor: MODULE_BG, fontStyle: 'bold' as const, halign: 'center' as const, fontSize: 8 }
-                }]);
-
-                // 2. Mode label headers
-                const headerRow: any[] = [];
-                headerRow.push({ content: 'Content Title', styles: { fontStyle: 'italic' as const, halign: 'right' as const, fillColor: HEADER_BG, fontSize: 7 } });
-                activeModes.forEach(mode => {
-                    headerRow.push({
-                        content: DELIVERY_MODE_LABELS[mode],
-                        styles: { fontSize: 6, halign: 'center' as const, fontStyle: 'bold' as const, fillColor: HEADER_BG }
-                    });
-                });
-                headerRow.push({ content: 'Duration', styles: { fontStyle: 'bold' as const, halign: 'center' as const, fillColor: HEADER_BG, fontSize: 7 } });
-                headerRow.push({ content: '', styles: { fillColor: HEADER_BG } });
-                headerRow.push({ content: '', styles: { fillColor: HEADER_BG } });
-                matrixBody.push(headerRow);
-
-                // 3. Objectives
-                let objectivesText = 'Related Learning Objectives: ';
-                if (mod.associatedObjectiveIds && mod.associatedObjectiveIds.length > 0) {
-                    objectivesText += mod.associatedObjectiveIds
-                        .map(id => {
-                            const o = currentLS.objectives.find(obj => obj.id === id);
-                            return o ? `(LObj: ${o.text})` : '';
-                        })
-                        .filter(Boolean)
-                        .join(', ');
-                } else {
-                    objectivesText += 'None';
-                }
-                matrixBody.push([{
-                    content: objectivesText,
-                    colSpan: 1 + activeModes.length + 3,
-                    styles: { textColor: [100, 100, 100], fontSize: 7, fontStyle: 'italic' as const }
-                }]);
-
-                // 4. Contents
-                if (mod.contents.length === 0) {
-                    const emptyRow: any[] = [{ content: '(No Content)', styles: { textColor: [150, 150, 150], fontStyle: 'italic' as const } }];
-                    for (let i = 0; i < activeModes.length; i++) emptyRow.push('');
-                    emptyRow.push('');
-                    emptyRow.push('');
-                    emptyRow.push('');
-                    matrixBody.push(emptyRow);
-                } else {
-                    mod.contents.forEach((c, cIdx) => {
-                        const createRow = (item: LSContent, label: string) => {
-                            const row: any[] = [];
-                            row.push({ content: `${label} ${item.title}`, styles: { fontSize: 8 } });
-
-                            activeModes.forEach(mode => {
-                                if (item.deliveryModes.includes(mode)) {
-                                    const linkUrl = item.deliveryLinks[mode];
-                                    row.push({
-                                        content: '\u2713',
-                                        styles: {
-                                            halign: 'center' as const,
-                                            font: 'Roboto',
-                                            fontStyle: 'normal' as const,
-                                            fontSize: 12,
-                                            fillColor: CHECK_BG,
-                                            textColor: linkUrl ? [0, 0, 200] : [0, 0, 0],
-                                        }
-                                    });
-                                } else {
-                                    row.push('');
-                                }
-                            });
-
-                            row.push({ content: `${item.duration} min`, styles: { halign: 'center' as const, fontSize: 8 } });
-                            row.push('');
-                            row.push('');
-                            return row;
-                        };
-
-                        matrixBody.push(createRow(c, `${modIdx + 1}.${cIdx + 1}`));
-
-                        if (c.subContents) {
-                            c.subContents.forEach((sub, sIdx) => {
-                                matrixBody.push(createRow(sub, `  ${modIdx + 1}.${cIdx + 1}.${sIdx + 1}`));
-                            });
-                        }
-                    });
-                }
-            });
-
-            const mainHead = [
-                [
-                    { content: 'MODULES', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
-                    { content: 'DELIVERY MODES', colSpan: activeModes.length, styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
-                    { content: 'DURATION', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
-                    { content: 'ASSESSMENT', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
-                    { content: 'LEARNING OUTCOMES', styles: { halign: 'center' as const, fontStyle: 'bold' as const } }
-                ]
-            ];
-
-            autoTable(doc, {
-                startY: 28,
-                head: mainHead,
-                body: matrixBody,
-                theme: 'grid',
-                headStyles: {
-                    font: 'Roboto',
-                    fillColor: ITU_BLUE,
-                    textColor: [255, 255, 255],
-                    fontStyle: 'bold',
-                    fontSize: 9,
-                    cellPadding: 3,
-                },
-                styles: {
-                    font: 'Roboto',
-                    fontSize: 8,
-                    lineWidth: 0.3,
-                    lineColor: [0, 0, 0],
-                    overflow: 'linebreak',
-                    cellPadding: 2,
-                },
-                columnStyles: {
-                    0: { cellWidth: 45 },
-                    [1 + activeModes.length]: { cellWidth: 16 }, // Duration
-                    [1 + activeModes.length + 1]: { cellWidth: 28 }, // Assessment
-                    [1 + activeModes.length + 2]: { cellWidth: 28 }, // Outcome
-                },
-                didParseCell: (data) => {
-                    if (data.section === 'body' && data.column.index > 0 && data.column.index <= activeModes.length) {
-                        data.cell.styles.cellWidth = 7;
-                    }
-                }
-            });
-
-            doc.save(`Toolkit1-LS-${currentLS.code || 'Draft'}.pdf`);
-
-        } catch (err) {
-            console.error("PDF Error:", err);
-            alert("Could not generate PDF: " + err);
-        } finally {
-            setDownloading(false);
-        }
+    // --- Print to PDF (Native Browser Print) ---
+    const downloadPDF = () => {
+        // We will trigger the browser's native print dialog
+        // The user can choose "Save as PDF" there.
+        // This ensures pixel-perfect rendering of the CSS with selectable text.
+        window.print();
     };
 
     const downloadFile = (type: 'html' | 'doc') => {
@@ -470,144 +285,240 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-itu-blue print:text-black">4. LS Output</h2>
-                <div className="flex space-x-2">
-                    <button
-                        onClick={() => downloadFile('html')}
-                        className="flex items-center px-3 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-sm font-medium shadow-sm"
-                    >
-                        <FileCode className="w-4 h-4 mr-2" />
-                        HTML
-                    </button>
-                    <button
-                        onClick={() => downloadFile('doc')}
-                        className="flex items-center px-3 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 transition-colors text-sm font-medium shadow-sm"
-                    >
-                        <FileText className="w-4 h-4 mr-2" />
-                        Word (DOC)
-                    </button>
-                    <button
-                        onClick={downloadPDF}
-                        disabled={downloading}
-                        className="flex items-center px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium shadow-sm"
-                    >
-                        {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileDown className="w-4 h-4 mr-2" />}
-                        Download PDF
-                    </button>
-                </div>
-            </div>
+            {/* Print Styles for PDF Export */}
+            <style type="text/css" media="print">
+                {`@page { size: A3 portrait !important; margin: 0 !important; width: 100% !important; padding: 0 !important;}
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact;margin: 0 !important; }
+                    body * { visibility: hidden !important; }
+                    #pdf-preview-container * { visibility: visible !important; }
+                    #pdf-preview-container { padding: 1mm !important;  width: 90% !important;position: absolute; margin: 1% !important;top: 5%; left:5%;right:5%;bottom:5%;}
+                `}
+            </style>
 
-            <div className="p-8 bg-slate-50 border border-slate-200 text-center rounded mb-8">
+            {/* --- TOP BAR ACTIONS --- */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 print:hidden">
+                <div>
+                    <h2 className="text-xl font-bold text-slate-800">Export & Finalize</h2>
+                    <p className="text-sm text-slate-500">Download your Learning Station Matrix as HTML, DOC, or print natively to PDF.</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* PUBLISH TOGGLE */}
+                    {context.role === 'owner' && (
+                        <div className="flex items-center space-x-3 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
+                            <span className={`text-sm font-medium ${currentLS.isPublished ? 'text-emerald-700' : 'text-slate-600'}`}>
+                                {currentLS.isPublished ? 'Public' : 'Private'}
+                            </span>
+                            <button
+                                onClick={() => {
+                                    context.updateLS({ isPublished: !currentLS.isPublished });
+                                }}
+                                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${currentLS.isPublished ? 'bg-emerald-500' : 'bg-slate-300'
+                                    }`}
+                                title={currentLS.isPublished ? "Make private" : "Publish to community"}
+                            >
+                                <span
+                                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${currentLS.isPublished ? 'translate-x-5' : 'translate-x-1'
+                                        }`}
+                                />
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => downloadFile('html')}
+                            className="flex items-center gap-2 bg-[#ea580c] hover:bg-[#c2410c] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
+                        >
+                            <FileCode className="w-4 h-4" />
+                            HTML
+                        </button>
+                        <button
+                            onClick={() => downloadFile('doc')}
+                            className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
+                        >
+                            <FileText className="w-4 h-4" />
+                            Word (DOC)
+                        </button>
+                        <button
+                            onClick={downloadPDF}
+                            disabled={downloading}
+                            className="flex items-center gap-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
+                            title="Prints the current view. Select 'Save as PDF' as the destination."
+                        >
+                            {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                            {downloading ? 'Preparing...' : 'Download PDF'}
+                        </button>
+                    </div>
+                </div>
+            </div >
+
+            <div className="p-8 bg-slate-50 border border-slate-200 text-center rounded mb-8 print:hidden">
                 <p className="text-slate-600 mb-4">
                     Your design is ready! Use the buttons above to download. Below is a <strong>live preview</strong> of the document.
                 </p>
             </div>
 
-            {/* --- PREVIEW SECTION --- */}
-            <div className="border border-slate-300 shadow-lg bg-white p-8 overflow-auto max-h-[800px] font-sans">
-                <h1 className="text-2xl font-bold text-center text-itu-blue mb-2 font-sans">LEARNING STATION DESIGN</h1>
-                <h2 className="text-xl font-bold text-center text-itu-blue mb-6 font-sans">INFORMATION TABLE</h2>
+            {/* --- PREVIEW SECTION (Printable Area) --- */}
+            <div className="border border-slate-300 shadow-lg bg-slate-200 p-8 overflow-auto max-h-[800px] print:max-h-none print:shadow-none print:border-none print:bg-white print:p-0 print:overflow-visible">
+                <div id="pdf-preview-container" className="bg-white p-10 font-sans shadow-sm print:shadow-none print:p-0" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                    <h1 className="text-2xl font-bold text-center text-itu-blue mb-2 font-sans tracking-wide">LEARNING STATION DESIGN</h1>
+                    <h2 className="text-xl font-bold text-center text-itu-blue mb-8 font-sans">INFORMATION TABLE</h2>
 
-                {/* Info Table */}
-                <table className="w-full border-collapse border border-black mb-8 text-sm font-sans">
-                    <tbody>
-                        {getInfoTableData().map(([label, value], i) => (
-                            <tr key={i}>
-                                <td className="border border-black p-2 bg-slate-50 font-bold w-1/3">{label}</td>
-                                <td className="border border-black p-2 whitespace-pre-wrap">{value}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                <h2 className="text-xl font-bold text-center text-itu-blue mb-6 font-sans">LS MATRIX</h2>
-
-                {/* Matrix Table */}
-                <table className="w-full border-collapse border border-black text-xs font-sans">
-                    <thead>
-                        <tr className="bg-slate-100">
-                            <th className="border border-black p-2 w-32">MODULES</th>
-                            <th className="border border-black p-2" colSpan={activeModes.length}>DELIVERY MODES</th>
-                            <th className="border border-black p-2 w-16">Duration</th>
-                            <th className="border border-black p-2 w-24">Assessment</th>
-                            <th className="border border-black p-2 w-24">Outcomes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {currentLS.modules.map((mod, modIdx) => (
-                            <React.Fragment key={mod.id}>
-                                {/* 1. Module Title Row (assessment + outcome inline) */}
-                                <tr className="bg-slate-200 font-bold">
-                                    <td className="border border-black p-2" colSpan={1 + activeModes.length + 1}>Module {modIdx + 1}: {mod.title}</td>
-                                    <td className="border border-black p-2 text-center text-[10px]">{mod.assessmentMethods?.join(', ')}</td>
-                                    <td className="border border-black p-2 text-center text-[10px]">{mod.learningOutcome}</td>
+                    {/* Info Table */}
+                    <table className="w-full border-collapse border border-black mb-12 text-sm font-sans">
+                        <tbody>
+                            {getInfoTableData().map(([label, value], i) => (
+                                <tr key={i}>
+                                    <td className="border border-black p-2 bg-slate-50 font-bold w-1/3">{label}</td>
+                                    <td className="border border-black p-2 whitespace-pre-wrap">{value}</td>
                                 </tr>
+                            ))}
+                        </tbody>
+                    </table>
 
-                                {/* 2. Headers Row */}
-                                <tr className="bg-slate-50 text-slate-600 text-[10px]">
-                                    <td className="border border-black p-1 text-right italic">Content Title</td>
-                                    {activeModes.map(mode => (
-                                        <td key={mode} className="border border-black p-1 text-center font-bold relative h-28">
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                                                <span className="text-blue-600 flex-shrink-0">{DELIVERY_MODE_ICONS[mode]}</span>
-                                                <span className="text-[8px] leading-tight" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{DELIVERY_MODE_LABELS[mode]}</span>
-                                            </div>
-                                        </td>
-                                    ))}
-                                    <td className="border border-black p-1 text-center italic">Duration</td>
-                                    <td className="border border-black p-1"></td>
-                                    <td className="border border-black p-1"></td>
-                                </tr>
+                    <h2 className="text-xl font-bold text-center text-itu-blue mb-8 font-sans">LS MATRIX</h2>
 
-                                {/* 3. Objectives Row */}
-                                <tr>
-                                    <td className="border border-black p-2 italic text-slate-500" colSpan={1 + activeModes.length + 3}>
-                                        Related Objectives: {mod.associatedObjectiveIds.map(id => {
-                                            const o = currentLS.objectives.find(x => x.id === id);
-                                            return o ? `(LObj: ${o.text})` : '';
-                                        }).join(', ') || 'None'}
-                                    </td>
-                                </tr>
+                    {/* Matrix Tables - Each module is an isolated table */}
+                    {currentLS.modules.length === 0 && <div className="text-center italic text-slate-500 py-4">No modules designed yet.</div>}
 
-                                {/* 4. Contents — each row with its own duration */}
-                                {mod.contents.length === 0 ? (
-                                    <tr><td className="border border-black p-2" colSpan={activeModes.length + 4}>(No Content)</td></tr>
-                                ) : (
-                                    mod.contents.map((content, cIdx) => (
-                                        <React.Fragment key={content.id}>
-                                            <tr>
-                                                <td className="border border-black p-1 pl-2">{modIdx + 1}.{cIdx + 1} {content.title}</td>
-                                                {activeModes.map(mode => (
-                                                    <td key={mode} className={`border border-black p-1 text-center ${content.deliveryModes.includes(mode) ? 'bg-blue-50 font-bold' : ''}`}>
-                                                        {content.deliveryModes.includes(mode) ? '✓' : ''}
-                                                    </td>
-                                                ))}
-                                                <td className="border border-black p-1 text-center">{content.duration} min</td>
-                                                <td className="border border-black p-1"></td>
-                                                <td className="border border-black p-1"></td>
-                                            </tr>
-                                            {content.subContents?.map((sub, sIdx) => (
-                                                <tr key={sub.id}>
-                                                    <td className="border border-black p-1 pl-4 text-slate-600">{modIdx + 1}.{cIdx + 1}.{sIdx + 1} {sub.title}</td>
-                                                    {activeModes.map(mode => (
-                                                        <td key={mode} className={`border border-black p-1 text-center ${sub.deliveryModes.includes(mode) ? 'bg-blue-50 font-bold' : ''}`}>
-                                                            {sub.deliveryModes.includes(mode) ? '✓' : ''}
-                                                        </td>
-                                                    ))}
-                                                    <td className="border border-black p-1 text-center">{sub.duration} min</td>
-                                                    <td className="border border-black p-1"></td>
-                                                    <td className="border border-black p-1"></td>
-                                                </tr>
+                    {currentLS.modules.map((mod, modIdx) => {
+                        const activeModes = getActiveModesForModule(mod);
+                        let totalRows = 0;
+                        mod.contents.forEach(c => {
+                            totalRows++;
+                            if (c.subContents) totalRows += c.subContents.length;
+                        });
+                        let isFirstRowForAssessment = true;
+                        // Calculate equal width for mode columns (e.g. if 5 modes, each gets same share)
+                        const modeColWidth = `${40 / Math.max(1, activeModes.length)}%`;
+
+                        return (
+                            <div key={mod.id} className="mb-12 break-inside-avoid">
+                                <table className="w-full border-collapse border border-black text-xs font-sans table-fixed">
+                                    <colgroup>
+                                        <col style={{ width: '25%' }} /> {/* Content Title */}
+                                        {activeModes.map(mode => (
+                                            <col key={mode} style={{ width: modeColWidth }} />
+                                        ))}
+                                        <col style={{ width: '8%' }} />  {/* Duration */}
+                                        <col style={{ width: '13%' }} /> {/* Assessment */}
+                                        <col style={{ width: '14%' }} /> {/* Outcomes */}
+                                    </colgroup>
+                                    <thead>
+                                        <tr className="bg-slate-100">
+                                            <th className="border border-black p-2 tracking-wider text-left">MODULE {modIdx + 1}</th>
+                                            <th className="border border-black p-2 tracking-wider bg-slate-200" colSpan={activeModes.length}>DELIVERY MODES</th>
+                                            <th className="border border-black p-2 tracking-wider">Duration</th>
+                                            <th className="border border-black p-2 tracking-wider">Assessment</th>
+                                            <th className="border border-black p-2 tracking-wider">Outcomes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {/* 1. Module Title Row */}
+                                        <tr className="bg-slate-200 font-bold border-t-[3px] border-black">
+                                            <td className="border border-black p-2 uppercase text-center" colSpan={1 + activeModes.length + 3}>{mod.title || 'Untitled Module'}</td>
+                                        </tr>
+
+                                        {/* 2. Headers Row */}
+                                        <tr className="bg-slate-50 text-slate-600 text-[10px]">
+                                            <td className="border border-black p-1 text-right italic font-medium">Content Title</td>
+                                            {activeModes.map(mode => (
+                                                <td key={mode} className="border border-black p-1 text-center font-bold relative h-12" title={DELIVERY_MODE_LABELS[mode]}>
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <span className="text-blue-600">{DELIVERY_MODE_ICONS[mode]}</span>
+                                                    </div>
+                                                </td>
                                             ))}
-                                        </React.Fragment>
-                                    ))
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </tbody>
-                </table>
+                                            <td className="border border-black p-1 text-center italic font-medium">Duration</td>
+                                            <td className="border border-black p-1 text-center italic font-medium">Assessment</td>
+                                            <td className="border border-black p-1 text-center italic font-medium">Outcomes</td>
+                                        </tr>
+
+                                        {/* 3. Objectives Row */}
+                                        <tr>
+                                            <td className="border border-black p-2 italic text-slate-600 bg-slate-50/50" colSpan={1 + activeModes.length + 3}>
+                                                <span className="font-semibold mr-1">Related Objectives:</span>
+                                                {mod.associatedObjectiveIds.length > 0 ? mod.associatedObjectiveIds.map(id => {
+                                                    const o = currentLS.objectives.find(x => x.id === id);
+                                                    return o ? `[LObj: ${o.text}]` : '';
+                                                }).join(' • ') : 'None specified'}
+                                            </td>
+                                        </tr>
+
+                                        {/* 4. Contents */}
+                                        {mod.contents.length === 0 ? (
+                                            <tr>
+                                                <td className="border border-black p-3 text-slate-400 italic text-center" colSpan={activeModes.length + 2}>(No Content)</td>
+                                                <td className="border border-black p-2 text-center text-[10px] bg-slate-50/30">{mod.assessmentMethods?.join(', ') || '-'}</td>
+                                                <td className="border border-black p-2 text-center text-[10px] bg-slate-50/30">{mod.learningOutcome || '-'}</td>
+                                            </tr>
+                                        ) : (
+                                            mod.contents.map((content, cIdx) => (
+                                                <React.Fragment key={content.id}>
+                                                    <tr>
+                                                        <td className="border border-black p-2 font-medium">{modIdx + 1}.{cIdx + 1} {content.title}</td>
+                                                        {activeModes.map(mode => {
+                                                            const hasMode = content.deliveryModes.includes(mode);
+                                                            const linkUrl = content.deliveryLinks?.[mode];
+                                                            return (
+                                                                <td key={mode} className={`border border-black p-1 text-center align-middle ${hasMode ? 'bg-blue-50/60 font-bold' : ''}`}>
+                                                                    {hasMode && (
+                                                                        linkUrl ? (
+                                                                            <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
+                                                                        ) : (
+                                                                            <span className="text-slate-800">✓</span>
+                                                                        )
+                                                                    )}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                        <td className="border border-black p-2 text-center whitespace-nowrap">{content.duration} min</td>
+                                                        {isFirstRowForAssessment && (
+                                                            <td rowSpan={totalRows} className="border border-black p-3 text-center align-middle text-[10px] break-words bg-slate-50/30">
+                                                                {mod.assessmentMethods?.join(', ') || '-'}
+                                                            </td>
+                                                        )}
+                                                        {isFirstRowForAssessment && (
+                                                            <td rowSpan={totalRows} className="border border-black p-3 text-center align-middle text-[10px] break-words bg-slate-50/30">
+                                                                {mod.learningOutcome || '-'}
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                    {(() => { isFirstRowForAssessment = false; return null; })()}
+                                                    {content.subContents?.map((sub, sIdx) => (
+                                                        <tr key={sub.id}>
+                                                            <td className="border border-black p-1.5 pl-6 text-slate-700 italic border-l-2 border-l-slate-300">{modIdx + 1}.{cIdx + 1}.{sIdx + 1} {sub.title}</td>
+                                                            {activeModes.map(mode => {
+                                                                const hasMode = sub.deliveryModes.includes(mode);
+                                                                const linkUrl = sub.deliveryLinks?.[mode];
+                                                                return (
+                                                                    <td key={mode} className={`border border-black p-1 text-center align-middle ${hasMode ? 'bg-blue-50/60 font-bold' : ''}`}>
+                                                                        {hasMode && (
+                                                                            linkUrl ? (
+                                                                                <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
+                                                                            ) : (
+                                                                                <span className="text-slate-800">✓</span>
+                                                                            )
+                                                                        )}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                            <td className="border border-black p-1 text-center whitespace-nowrap text-slate-600">{sub.duration} min</td>
+                                                        </tr>
+                                                    ))}
+                                                </React.Fragment>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
-        </div>
+        </div >
     );
 };

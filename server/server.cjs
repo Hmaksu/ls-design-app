@@ -197,6 +197,8 @@ function getStationAccess(db, stationId, userId) {
     const collab = db.prepare('SELECT * FROM station_collaborators WHERE station_id = ? AND user_id = ?').get(stationId, userId);
     if (collab) return { station, role: 'collaborator' };
 
+    if (station.is_published === 1) return { station, role: 'viewer' };
+
     return { station: null, role: null };
 }
 
@@ -246,7 +248,36 @@ app.get('/api/ls', authMiddleware, (req, res) => {
 
         res.json({ stations: [...enrichOwned, ...enrichShared] });
     } catch (err) {
-        console.error('List LS error:', err);
+        console.error('List LS error:', err.message, err.stack);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /api/ls/published — get all published stations across the platform
+app.get('/api/ls/published', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const published = db.prepare(`
+            SELECT ls.id, ls.title, ls.code, ls.created_at, ls.updated_at, u.name as owner_name
+            FROM learning_stations ls
+            JOIN users u ON ls.user_id = u.id
+            WHERE ls.is_published = 1
+            ORDER BY ls.updated_at DESC
+        `).all();
+
+        const enrichPublished = published.map(s => {
+            try {
+                const full = db.prepare('SELECT data FROM learning_stations WHERE id = ?').get(s.id);
+                const parsed = JSON.parse(full.data);
+                return { ...s, moduleCount: parsed.modules?.length || 0, level: parsed.level || '', role: 'viewer' };
+            } catch {
+                return { ...s, moduleCount: 0, level: '', role: 'viewer' };
+            }
+        });
+
+        res.json({ stations: enrichPublished });
+    } catch (err) {
+        console.error('List published error:', err.message, err.stack);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -260,9 +291,10 @@ app.post('/api/ls', authMiddleware, (req, res) => {
         }
 
         const db = getDb();
+        const isPublished = station.isPublished ? 1 : 0;
         db.prepare(
-            'INSERT INTO learning_stations (id, user_id, title, code, data) VALUES (?, ?, ?, ?, ?)'
-        ).run(station.id, req.user.id, station.title || '', station.code || '', JSON.stringify(station));
+            'INSERT INTO learning_stations (id, user_id, title, code, data, is_published) VALUES (?, ?, ?, ?, ?, ?)'
+        ).run(station.id, req.user.id, station.title || '', station.code || '', JSON.stringify(station), isPublished);
 
         res.status(201).json({ success: true, id: station.id });
     } catch (err) {
@@ -285,13 +317,14 @@ app.put('/api/ls/:id', authMiddleware, (req, res) => {
         const db = getDb();
         const { role } = getStationAccess(db, req.params.id, req.user.id);
 
-        if (!role) {
+        if (!role || role === 'viewer') {
             return res.status(403).json({ error: 'Not authorized' });
         }
 
+        const isPublished = station.isPublished ? 1 : 0;
         db.prepare(
-            "UPDATE learning_stations SET title = ?, code = ?, data = ?, updated_at = datetime('now') WHERE id = ?"
-        ).run(station.title || '', station.code || '', JSON.stringify(station), req.params.id);
+            "UPDATE learning_stations SET title = ?, code = ?, data = ?, is_published = ?, updated_at = datetime('now') WHERE id = ?"
+        ).run(station.title || '', station.code || '', JSON.stringify(station), isPublished, req.params.id);
 
         res.json({ success: true });
     } catch (err) {
@@ -331,9 +364,9 @@ app.get('/api/ls/:id', authMiddleware, (req, res) => {
             return res.status(403).json({ error: 'Not authorized' });
         }
 
-        res.json({ station: { ...station, data: JSON.parse(station.data) } });
+        res.json({ station: { ...station, data: JSON.parse(station.data) }, role });
     } catch (err) {
-        console.error('Get LS error:', err);
+        console.error('Get LS error:', err.message, err.stack);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -39,6 +39,7 @@ function initTables() {
       title TEXT NOT NULL DEFAULT '',
       code TEXT NOT NULL DEFAULT '',
       data TEXT NOT NULL,
+      is_published INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -67,7 +68,8 @@ function initTables() {
   const migrations = [
     "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'",
     "ALTER TABLE users ADD COLUMN security_question TEXT DEFAULT ''",
-    "ALTER TABLE users ADD COLUMN security_answer TEXT DEFAULT ''"
+    "ALTER TABLE users ADD COLUMN security_answer TEXT DEFAULT ''",
+    "ALTER TABLE learning_stations ADD COLUMN is_published INTEGER DEFAULT 0"
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch (e) { /* column already exists */ }

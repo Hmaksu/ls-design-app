@@ -89,9 +89,14 @@ export async function getStations(): Promise<StationSummary[]> {
     return data.stations;
 }
 
+export async function getPublishedStations(): Promise<StationSummary[]> {
+    const data = await apiFetch('/ls/published');
+    return data.stations;
+}
+
 export async function getStation(id: string): Promise<any> {
     const data = await apiFetch(`/ls/${id}`);
-    return data.station.data;
+    return data;
 }
 
 export async function createStation(station: any): Promise<void> {

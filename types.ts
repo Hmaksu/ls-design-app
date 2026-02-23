@@ -8,6 +8,8 @@ export enum BloomLevel {
 }
 
 export enum DeliveryModeType {
+  READING = 'READING',
+  PRESENTATION = 'PRESENTATION',
   AI = 'AI',
   ANIMATION = 'ANIMATION',
   APPLICATION = 'APPLICATION',
@@ -34,7 +36,6 @@ export enum DeliveryModeType {
   PMP_EXAM = 'PMP_EXAM',
   PMI_CONTENT = 'PMI_CONTENT',
   PODCAST = 'PODCAST',
-  READING = 'READING',
   REALITY = 'REALITY',
   REFLECTION = 'REFLECTION',
   ROLE_PLAYING = 'ROLE_PLAYING',
@@ -82,6 +83,7 @@ export interface LearningStation {
   id: string;
   // --- Identity ---
   code: string;
+  isPublished?: boolean;
   initialDesignDate: string;
   finalRevisionDate: string;
   ects: string;
@@ -120,10 +122,12 @@ export interface LearningStation {
 
 export type LSContextType = {
   currentLS: LearningStation;
+  role?: 'owner' | 'collaborator' | 'viewer';
   updateLS: (data: Partial<LearningStation>) => void;
   addModule: () => void;
   updateModule: (id: string, data: Partial<LSModule>) => void;
   removeModule: (id: string) => void;
+  moveModule: (index: number, direction: 'up' | 'down') => void;
   addObjective: () => void;
   updateObjective: (id: string, text: string) => void;
   removeObjective: (id: string) => void;

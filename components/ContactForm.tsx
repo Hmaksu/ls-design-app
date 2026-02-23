@@ -39,6 +39,16 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
             };
 
             await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
+
+            // Also save to database
+            await fetch('/api/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: name.trim(), email: email.trim(), subject: subject.trim(), message: message.trim() }),
+            });
+
             setStatus('success');
             setSubject('');
             setMessage('');

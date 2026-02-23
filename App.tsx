@@ -50,8 +50,11 @@ function App() {
   const [view, setView] = useState<AppView>('auth');
   const [currentLS, setCurrentLS] = useState<LearningStation>(createInitialLS());
   const [editingId, setEditingId] = useState<string | null>(null); // null = new, string = existing
+  const [role, setRole] = useState<'owner' | 'collaborator' | 'viewer'>('owner');
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const lastSavedDataRef = useRef<string>('');
   const [authLoading, setAuthLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,10 +75,35 @@ function App() {
     checkAuth();
   }, []);
 
+  // ═══ Browser History Navigation ═══
+  const pushNav = (v: AppView, step: number) => {
+    let hash = '#/';
+    if (v === 'dashboard') hash = '#/dashboard';
+    else if (v === 'editor') hash = `#/editor/step/${step}`;
+    window.history.pushState({ view: v, step }, '', hash);
+  };
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const state = e.state;
+      if (!state) return;
+      if (state.view === 'dashboard') {
+        setView('dashboard');
+        setCurrentStep(1);
+      } else if (state.view === 'editor') {
+        setView('editor');
+        setCurrentStep(state.step || 1);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // ═══ Auth Handlers ═══
   const handleAuthSuccess = (u: AuthUser) => {
     setUser(u);
     setView('dashboard');
+    window.history.replaceState({ view: 'dashboard', step: 1 }, '', '#/dashboard');
   };
 
   const handleLogout = () => {
@@ -84,23 +112,36 @@ function App() {
     setView('auth');
     setCurrentLS(createInitialLS());
     setEditingId(null);
+    window.history.replaceState({ view: 'auth', step: 1 }, '', '#/');
   };
 
   // ═══ Dashboard Handlers ═══
   const handleCreateNew = () => {
-    setCurrentLS(createInitialLS());
+    const fresh = createInitialLS();
+    setCurrentLS(fresh);
     setEditingId(null);
+    setRole('owner');
     setCurrentStep(1);
     setView('editor');
+    pushNav('editor', 1);
+    lastSavedDataRef.current = JSON.stringify(fresh);
   };
 
   const handleOpenStation = async (id: string) => {
     try {
-      const data = await getStation(id);
-      setCurrentLS(data);
+      const result = await getStation(id);
+      setCurrentLS(result.station.data);
+      setRole(result.role as any);
       setEditingId(id);
-      setCurrentStep(1);
       setView('editor');
+      if (result.role === 'viewer') {
+        setCurrentStep(4);
+        pushNav('editor', 4);
+      } else {
+        setCurrentStep(1);
+        pushNav('editor', 1);
+      }
+      lastSavedDataRef.current = JSON.stringify(result.station.data);
     } catch (err) {
       alert('Failed to load station');
     }
@@ -109,6 +150,7 @@ function App() {
   const handleBackToDashboard = () => {
     setView('dashboard');
     setCurrentStep(1);
+    pushNav('dashboard', 1);
   };
 
   // ═══ LS Operations ═══
@@ -147,6 +189,31 @@ function App() {
     }));
   };
 
+  const moveModule = (index: number, direction: 'up' | 'down') => {
+    setCurrentLS(prev => {
+      const newModules = [...prev.modules];
+      if (direction === 'up' && index > 0) {
+        [newModules[index - 1], newModules[index]] = [newModules[index], newModules[index - 1]];
+      } else if (direction === 'down' && index < newModules.length - 1) {
+        [newModules[index + 1], newModules[index]] = [newModules[index], newModules[index + 1]];
+      }
+
+      // Scroll to the moved module after state updates and re-renders
+      setTimeout(() => {
+        const targetId = newModules[direction === 'down' ? index + 1 : index - 1]?.id;
+        if (targetId) {
+          const el = document.getElementById(`module-${targetId}`);
+          if (el) {
+            const y = el.getBoundingClientRect().top + window.scrollY - 70; // 70px offset for nav
+            window.scrollTo({ top: y, behavior: 'smooth' });
+          }
+        }
+      }, 100);
+
+      return { ...prev, modules: newModules };
+    });
+  };
+
   const addObjective = () => {
     setCurrentLS(prev => ({
       ...prev,
@@ -177,6 +244,7 @@ function App() {
         await createStation(currentLS);
         setEditingId(currentLS.id);
       }
+      lastSavedDataRef.current = JSON.stringify(currentLS);
       alert('Station saved successfully!');
     } catch (err: any) {
       alert('Failed to save: ' + (err.message || 'Unknown error'));
@@ -184,6 +252,36 @@ function App() {
       setSaving(false);
     }
   };
+
+  // ═══ Autosave ═══
+  useEffect(() => {
+    if (view !== 'editor') return;
+    if (role === 'viewer') return;
+    // Prevent autosaving a completely empty new station without a title
+    if (!editingId && !currentLS.title.trim()) return;
+
+    const currentString = JSON.stringify(currentLS);
+    if (currentString === lastSavedDataRef.current) return;
+
+    const timer = setTimeout(async () => {
+      setAutoSaving(true);
+      try {
+        if (editingId) {
+          await updateStation(editingId, currentLS);
+        } else {
+          await createStation(currentLS);
+          setEditingId(currentLS.id);
+        }
+        lastSavedDataRef.current = currentString;
+      } catch (err) {
+        console.error('Autosave failed:', err);
+      } finally {
+        setAutoSaving(false);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [currentLS, view, editingId]);
 
   const saveAsJSON = () => {
     const json = JSON.stringify(currentLS, null, 2);
@@ -217,6 +315,8 @@ function App() {
           setEditingId(null); // treat as new
           setCurrentStep(1);
           setView('editor');
+          pushNav('editor', 1);
+          lastSavedDataRef.current = JSON.stringify(imported);
           alert("Project loaded successfully!");
         } else {
           alert("Error: Invalid or corrupt file format.");
@@ -232,10 +332,12 @@ function App() {
 
   const context: LSContextType = {
     currentLS,
+    role,
     updateLS,
     addModule,
     updateModule,
     removeModule,
+    moveModule,
     addObjective,
     updateObjective,
     removeObjective,
@@ -294,9 +396,17 @@ function App() {
             </button>
             <div className="w-px h-6 bg-white/20"></div>
             <div>
-              <h1 className="text-base font-bold tracking-tight">
-                {currentLS.title || 'New Learning Station'}
-              </h1>
+              <div className="flex items-center space-x-3">
+                <h1 className="text-base font-bold tracking-tight">
+                  {currentLS.title || 'New Learning Station'}
+                </h1>
+                {autoSaving && (
+                  <span className="text-xs flex items-center text-slate-300">
+                    <div className="w-3 h-3 border-2 border-slate-300 border-t-transparent rounded-full animate-spin mr-1"></div>
+                    Saving...
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-400">
                 {editingId ? 'Editing' : 'Creating new'} • {currentLS.code || 'No code'}
               </p>
@@ -307,7 +417,7 @@ function App() {
               <span className="text-xs text-slate-300 mr-2">{user.name}</span>
             )}
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              v2.1.3
+              Pre-Alpha v2.2.0
             </div>
           </div>
         </div>
@@ -324,10 +434,15 @@ function App() {
                   {[1, 2, 3, 4].map(step => (
                     <div
                       key={step}
-                      className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm cursor-pointer transition-colors ${step === currentStep ? 'bg-itu-blue text-white' :
-                        step < currentStep ? 'bg-itu-cyan text-white' : 'bg-slate-200 text-slate-500'
+                      className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition-colors ${role === 'viewer' && step !== 4 ? 'bg-slate-100 text-slate-400 cursor-not-allowed hidden' :
+                        step === currentStep ? 'bg-itu-blue text-white cursor-pointer' :
+                          step < currentStep ? 'bg-itu-cyan text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-pointer'
                         }`}
-                      onClick={() => setCurrentStep(step)}
+                      onClick={() => {
+                        if (role === 'viewer' && step !== 4) return;
+                        setCurrentStep(step);
+                        pushNav('editor', step);
+                      }}
                     >
                       {step}
                     </div>
@@ -373,7 +488,7 @@ function App() {
 
             <div className="flex justify-between mt-8 pb-12 print:hidden">
               <button
-                onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+                onClick={() => { const s = Math.max(1, currentStep - 1); setCurrentStep(s); pushNav('editor', s); }}
                 disabled={currentStep === 1}
                 className={`flex items-center px-6 py-3 rounded-lg font-medium ${currentStep === 1 ? 'opacity-0' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
                   }`}
@@ -392,19 +507,21 @@ function App() {
                       <Download className="w-5 h-5 mr-2" />
                       Save as JSON
                     </button>
-                    <button
-                      onClick={saveLS}
-                      disabled={saving}
-                      className="flex items-center px-4 py-3 bg-itu-gold text-white rounded-lg hover:bg-yellow-600 shadow-sm disabled:opacity-50"
-                    >
-                      <Save className="w-5 h-5 mr-2" />
-                      {saving ? 'Saving...' : 'Save to Server'}
-                    </button>
+                    {role !== 'viewer' && (
+                      <button
+                        onClick={saveLS}
+                        disabled={saving}
+                        className="flex items-center px-4 py-3 bg-itu-gold text-white rounded-lg hover:bg-yellow-600 shadow-sm disabled:opacity-50"
+                      >
+                        <Save className="w-5 h-5 mr-2" />
+                        {saving ? 'Saving...' : 'Save to Server'}
+                      </button>
+                    )}
                   </>
                 )}
 
                 <button
-                  onClick={() => setCurrentStep(prev => Math.min(4, prev + 1))}
+                  onClick={() => { const s = Math.min(4, currentStep + 1); setCurrentStep(s); pushNav('editor', s); }}
                   disabled={currentStep === 4}
                   className={`flex items-center px-6 py-3 rounded-lg font-medium ${currentStep === 4 ? 'hidden' : 'bg-itu-blue text-white hover:bg-blue-900 shadow-lg'
                     }`}

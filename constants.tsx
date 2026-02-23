@@ -10,6 +10,8 @@ import {
 import { DeliveryModeType } from './types';
 
 export const DELIVERY_MODE_ICONS: Record<DeliveryModeType, React.ReactNode> = {
+  [DeliveryModeType.READING]: <BookOpen className="w-5 h-5" />,
+  [DeliveryModeType.PRESENTATION]: <Presentation className="w-5 h-5" />,
   [DeliveryModeType.AI]: <Bot className="w-5 h-5" />,
   [DeliveryModeType.ANIMATION]: <Clapperboard className="w-5 h-5" />,
   [DeliveryModeType.APPLICATION]: <Wrench className="w-5 h-5" />,
@@ -37,7 +39,6 @@ export const DELIVERY_MODE_ICONS: Record<DeliveryModeType, React.ReactNode> = {
   [DeliveryModeType.PMP_EXAM]: <Award className="w-5 h-5" />,
   [DeliveryModeType.PMI_CONTENT]: <FileText className="w-5 h-5" />,
   [DeliveryModeType.PODCAST]: <Podcast className="w-5 h-5" />, // Lucide'da harbi Podcast ikonu var!
-  [DeliveryModeType.READING]: <BookOpen className="w-5 h-5" />,
   [DeliveryModeType.REALITY]: <Sparkles className="w-5 h-5" />,
   [DeliveryModeType.REFLECTION]: <Brain className="w-5 h-5" />,
   [DeliveryModeType.ROLE_PLAYING]: <VenetianMask className="w-5 h-5" />, // Tiyatro/Rol maskesi daha şık durur
@@ -54,6 +55,8 @@ export const DELIVERY_MODE_ICONS: Record<DeliveryModeType, React.ReactNode> = {
 };
 
 export const DELIVERY_MODE_LABELS: Record<DeliveryModeType, string> = {
+  [DeliveryModeType.READING]: 'Reading',
+  [DeliveryModeType.PRESENTATION]: 'Presentation',
   [DeliveryModeType.AI]: 'Artificial Intelligence',
   [DeliveryModeType.ANIMATION]: 'Animation',
   [DeliveryModeType.APPLICATION]: 'Application (Hands-on)',
@@ -80,7 +83,6 @@ export const DELIVERY_MODE_LABELS: Record<DeliveryModeType, string> = {
   [DeliveryModeType.PMP_EXAM]: 'PMP Exam',
   [DeliveryModeType.PMI_CONTENT]: 'PMI Content',
   [DeliveryModeType.PODCAST]: 'Podcast',
-  [DeliveryModeType.READING]: 'Reading',
   [DeliveryModeType.REALITY]: 'Reality (Realistic Experience)',
   [DeliveryModeType.REFLECTION]: 'Reflection',
   [DeliveryModeType.ROLE_PLAYING]: 'Role Playing',

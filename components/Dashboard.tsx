@@ -4,7 +4,7 @@ import {
     Search, LogOut, User, Loader2, AlertCircle, Share2, Users, X, UserPlus, UserMinus, MessageSquare, Shield
 } from 'lucide-react';
 import {
-    getStations, deleteStation, StationSummary,
+    getStations, getPublishedStations, deleteStation, StationSummary,
     shareStation, getCollaborators, removeCollaborator, Collaborator
 } from '../services/authService';
 import { ContactForm } from './ContactForm';
@@ -23,6 +23,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'mine' | 'community'>('mine');
+    const [publishedStations, setPublishedStations] = useState<StationSummary[]>([]);
 
     // Share modal state
     const [shareModalStationId, setShareModalStationId] = useState<string | null>(null);
@@ -39,8 +41,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
     const loadStations = async () => {
         try {
             setLoading(true);
-            const data = await getStations();
-            setStations(data);
+            const [myStations, communityStations] = await Promise.all([
+                getStations(),
+                getPublishedStations()
+            ]);
+            setStations(myStations);
+            setPublishedStations(communityStations);
         } catch (err: any) {
             setError(err.message || 'Failed to load stations');
         } finally {
@@ -111,9 +117,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
         }
     };
 
-    const filtered = stations.filter(s =>
-        s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.code.toLowerCase().includes(searchTerm.toLowerCase())
+    const currentList = activeTab === 'mine' ? stations : publishedStations;
+    const filtered = currentList.filter(s =>
+        (s.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.code || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -162,6 +169,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             <main className="container mx-auto px-4 py-8">
                 <div className="max-w-5xl mx-auto">
 
+                    {/* Tabs */}
+                    <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg w-fit mb-6">
+                        <button
+                            onClick={() => setActiveTab('mine')}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'mine' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            My Workspace
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('community')}
+                            className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'community' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <Users className="w-4 h-4" />
+                            <span>Community</span>
+                        </button>
+                    </div>
+
                     {/* Actions Bar */}
                     <div className="flex items-center justify-between mb-6">
                         <div className="relative flex-1 max-w-md">
@@ -174,13 +198,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                 className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             />
                         </div>
-                        <button
-                            onClick={onCreateNew}
-                            className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
-                        >
-                            <Plus className="w-4 h-4 mr-2" />
-                            New Station
-                        </button>
+                        {activeTab === 'mine' && (
+                            <button
+                                onClick={onCreateNew}
+                                className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                New Station
+                            </button>
+                        )}
                     </div>
 
                     {/* Content */}
@@ -202,7 +228,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <p className="text-sm text-slate-400 mb-6">
                                 {searchTerm ? 'Try a different search term' : 'Create your first learning station to get started'}
                             </p>
-                            {!searchTerm && (
+                            {!searchTerm && activeTab === 'mine' && (
                                 <button onClick={onCreateNew} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                                     <Plus className="w-4 h-4 inline mr-2" />
                                     Create Station
@@ -231,6 +257,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                                     <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium flex items-center">
                                                         <Users className="w-3 h-3 mr-1" />
                                                         Shared{station.owner_name ? ` by ${station.owner_name}` : ''}
+                                                    </span>
+                                                )}
+                                                {station.role === 'viewer' && (
+                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded font-medium flex items-center">
+                                                        <Users className="w-3 h-3 mr-1" />
+                                                        Published{station.owner_name ? ` by ${station.owner_name}` : ''}
                                                     </span>
                                                 )}
                                             </div>
