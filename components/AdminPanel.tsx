@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
     X, Users, Layers, Inbox, Loader2, Search,
     RefreshCw, Clock, Mail, Shield, Database,
-    Share2, UserPlus, UserMinus, AlertCircle, ChevronDown, ChevronUp
+    Share2, UserPlus, UserMinus, AlertCircle, ChevronDown, ChevronUp, Globe
 } from 'lucide-react';
 import {
     getAdminUsers, getAdminStations, getAdminMessages,
     getAdminStationCollaborators, adminShareStation, adminRemoveCollaborator,
-    AdminUser, AdminStation, Collaborator
+    adminTogglePublish, AdminUser, AdminStation, Collaborator
 } from '../services/authService';
 
 interface ContactMessage {
@@ -42,6 +42,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     const [shareEmail, setShareEmail] = useState('');
     const [shareError, setShareError] = useState('');
     const [shareLoading, setShareLoading] = useState(false);
+
+    // Publish toggle state
+    const [publishLoading, setPublishLoading] = useState<Record<string, boolean>>({});
+
+    const handleTogglePublish = async (station: AdminStation) => {
+        setPublishLoading(prev => ({ ...prev, [station.id]: true }));
+        try {
+            const res = await adminTogglePublish(station.id, !station.is_published);
+            setStations(prev => prev.map(s => s.id === station.id ? { ...s, is_published: res.is_published } : s));
+        } catch (err: any) {
+            alert('Failed to update publish status: ' + err.message);
+        } finally {
+            setPublishLoading(prev => ({ ...prev, [station.id]: false }));
+        }
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -274,6 +289,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                             <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-400" />{formatDate(s.updated_at)}
                                                         </span>
                                                     </div>
+                                                    <button
+                                                        onClick={() => handleTogglePublish(s)}
+                                                        disabled={publishLoading[s.id]}
+                                                        className={`ml-3 flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${s.is_published
+                                                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                                                            } disabled:opacity-50`}
+                                                        title={s.is_published ? "Make Private" : "Make Public"}
+                                                    >
+                                                        {publishLoading[s.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
+                                                        <span>{s.is_published ? 'Public' : 'Private'}</span>
+                                                    </button>
                                                     <button
                                                         onClick={() => toggleSharePanel(s.id)}
                                                         className={`ml-3 flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${expandedStationId === s.id

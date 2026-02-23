@@ -579,7 +579,7 @@ app.get('/api/admin/stations', authMiddleware, adminMiddleware, (req, res) => {
     try {
         const db = getDb();
         const stations = db.prepare(`
-            SELECT ls.id, ls.title, ls.code, ls.created_at, ls.updated_at,
+            SELECT ls.id, ls.title, ls.code, ls.is_published, ls.created_at, ls.updated_at,
                    u.id as owner_id, u.name as owner_name, u.email as owner_email
             FROM learning_stations ls
             JOIN users u ON ls.user_id = u.id
@@ -599,6 +599,24 @@ app.get('/api/admin/stations', authMiddleware, adminMiddleware, (req, res) => {
         res.json({ stations: enriched });
     } catch (err) {
         console.error('Admin stations error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Admin: Toggle publish status
+app.put('/api/admin/ls/:id/publish', authMiddleware, adminMiddleware, (req, res) => {
+    try {
+        const { isPublished } = req.body;
+        const db = getDb();
+
+        const isPublishedInt = isPublished ? 1 : 0;
+        db.prepare(
+            "UPDATE learning_stations SET is_published = ?, updated_at = datetime('now') WHERE id = ?"
+        ).run(isPublishedInt, req.params.id);
+
+        res.json({ success: true, is_published: isPublishedInt });
+    } catch (err) {
+        console.error('Admin publish error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

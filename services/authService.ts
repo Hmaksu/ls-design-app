@@ -177,6 +177,7 @@ export interface AdminStation {
     id: string;
     title: string;
     code: string;
+    is_published: number;
     created_at: string;
     updated_at: string;
     owner_id: number;
@@ -216,5 +217,12 @@ export async function adminShareStation(stationId: string, email: string): Promi
 export async function adminRemoveCollaborator(stationId: string, userId: number): Promise<void> {
     await apiFetch(`/admin/stations/${stationId}/share/${userId}`, {
         method: 'DELETE',
+    });
+}
+
+export async function adminTogglePublish(stationId: string, isPublished: boolean): Promise<{ is_published: number }> {
+    return apiFetch(`/admin/ls/${stationId}/publish`, {
+        method: 'PUT',
+        body: JSON.stringify({ isPublished }),
     });
 }

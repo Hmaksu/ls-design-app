@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Layers, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, ShieldQuestion, KeyRound, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Layers, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, ShieldQuestion, KeyRound, ArrowLeft, CheckCircle, MessageSquare } from 'lucide-react';
 import { register, login, getSecurityQuestion, resetPassword } from '../services/authService';
+import { ContactForm } from './ContactForm';
 
 const SECURITY_QUESTIONS = [
     'What was the name of your first pet?',
@@ -24,6 +25,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [showContactForm, setShowContactForm] = useState(false);
 
     // Form fields
     const [name, setName] = useState('');
@@ -337,10 +339,21 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                     )}
                 </div>
 
-                <p className="text-center text-slate-500 text-xs mt-6">
-                    &copy; {new Date().getFullYear()} Learning Station Design Tool.
-                </p>
+                <div className="flex flex-col items-center justify-center mt-6 space-y-3 relative z-10">
+                    <button
+                        onClick={() => setShowContactForm(true)}
+                        className="flex items-center space-x-1.5 px-4 py-2 text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-colors text-sm font-medium"
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Send Feedback</span>
+                    </button>
+                    <p className="text-center text-slate-500 text-xs">
+                        &copy; {new Date().getFullYear()} Learning Station Design Tool.
+                    </p>
+                </div>
             </div>
+
+            {showContactForm && <ContactForm onClose={() => setShowContactForm(false)} userName={name} userEmail={email} />}
         </div>
     );
 };

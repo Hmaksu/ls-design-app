@@ -6,7 +6,8 @@ import { Step3Modules } from './components/Steps/Step3Modules';
 import { Step4Matrix } from './components/Steps/Step4Matrix';
 import { AuthPage } from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
-import { ChevronRight, ChevronLeft, Save, Upload, ArrowLeft, Download } from 'lucide-react';
+import { ContactForm } from './components/ContactForm';
+import { ChevronRight, ChevronLeft, Save, Upload, ArrowLeft, Download, MessageSquare } from 'lucide-react';
 import {
   isLoggedIn, getMe, logout as apiLogout,
   getStation, createStation, updateStation,
@@ -51,6 +52,7 @@ function App() {
   const [currentLS, setCurrentLS] = useState<LearningStation>(createInitialLS());
   const [editingId, setEditingId] = useState<string | null>(null); // null = new, string = existing
   const [role, setRole] = useState<'owner' | 'collaborator' | 'viewer'>('owner');
+  const [showContactForm, setShowContactForm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
@@ -413,11 +415,19 @@ function App() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowContactForm(true)}
+              className="flex items-center space-x-1 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded transition-colors mr-2"
+              title="Send Feedback"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-xs hidden sm:inline">Feedback</span>
+            </button>
             {user && (
               <span className="text-xs text-slate-300 mr-2">{user.name}</span>
             )}
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              Pre-Alpha v2.2.0
+              Pre-Alpha v2.2.1
             </div>
           </div>
         </div>
@@ -540,6 +550,8 @@ function App() {
           <p>&copy; {new Date().getFullYear()} Learning Station Design Tool.</p>
         </div>
       </footer>
+
+      {showContactForm && <ContactForm onClose={() => setShowContactForm(false)} userName={user?.name} userEmail={user?.email} />}
     </div>
   );
 }

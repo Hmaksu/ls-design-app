@@ -129,7 +129,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             <header className="bg-white shadow-sm border-b border-slate-200">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800">My Learning Stations</h1>
+                        <h1 className="text-2xl font-bold text-slate-800">Learning Stations Designer</h1>
                         <p className="text-sm text-slate-500">Welcome back, {user.name}</p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -175,7 +175,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             onClick={() => setActiveTab('mine')}
                             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'mine' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            My Workspace
+                            My Learning Stations
                         </button>
                         <button
                             onClick={() => setActiveTab('community')}
