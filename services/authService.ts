@@ -40,19 +40,19 @@ export interface AuthUser {
     role: string;
 }
 
-export async function register(name: string, email: string, password: string, securityQuestion: string, securityAnswer: string): Promise<{ user: AuthUser; token: string }> {
+export async function register(name: string, email: string, password: string, securityQuestion: string, securityAnswer: string, turnstileToken: string): Promise<{ user: AuthUser; token: string }> {
     const data = await apiFetch('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password, securityQuestion, securityAnswer }),
+        body: JSON.stringify({ name, email, password, securityQuestion, securityAnswer, turnstileToken }),
     });
     setToken(data.token);
     return data;
 }
 
-export async function login(email: string, password: string): Promise<{ user: AuthUser; token: string }> {
+export async function login(email: string, password: string, turnstileToken: string): Promise<{ user: AuthUser; token: string }> {
     const data = await apiFetch('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, turnstileToken }),
     });
     setToken(data.token);
     return data;
@@ -148,17 +148,17 @@ export async function removeCollaborator(stationId: string, userId: number): Pro
 
 // ═══ Forgot Password ═══
 
-export async function getSecurityQuestion(email: string): Promise<{ securityQuestion: string }> {
+export async function getSecurityQuestion(email: string, turnstileToken: string): Promise<{ securityQuestion: string }> {
     return apiFetch('/auth/get-security-question', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, turnstileToken }),
     });
 }
 
-export async function resetPassword(email: string, securityAnswer: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+export async function resetPassword(email: string, securityAnswer: string, newPassword: string, turnstileToken: string): Promise<{ success: boolean; message: string }> {
     return apiFetch('/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email, securityAnswer, newPassword }),
+        body: JSON.stringify({ email, securityAnswer, newPassword, turnstileToken }),
     });
 }
 

@@ -25,14 +25,39 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+async function verifyTurnstileToken(token) {
+    if (!token) return false;
+    const secret = process.env.TURNSTILE_SECRET_KEY;
+    if (!secret) return true; // Skip if no secret configured
+    try {
+        const formData = new URLSearchParams();
+        formData.append('secret', secret);
+        formData.append('response', token);
+        const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await res.json();
+        return data.success;
+    } catch (err) {
+        console.error('Turnstile verification error:', err);
+        return false;
+    }
+}
+
 // ═══════════════════════════════════════════
 // AUTH ROUTES
 // ═══════════════════════════════════════════
 
 // POST /api/auth/register
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     try {
-        const { name, email, password, securityQuestion, securityAnswer } = req.body;
+        const { name, email, password, securityQuestion, securityAnswer, turnstileToken } = req.body;
+
+        const isValidCaptcha = await verifyTurnstileToken(turnstileToken);
+        if (!isValidCaptcha) {
+            return res.status(403).json({ error: 'CAPTCHA verification failed. Please try again.' });
+        }
 
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'Name, email, and password are required' });
@@ -74,9 +99,14 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 // POST /api/auth/login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, turnstileToken } = req.body;
+
+        const isValidCaptcha = await verifyTurnstileToken(turnstileToken);
+        if (!isValidCaptcha) {
+            return res.status(403).json({ error: 'CAPTCHA verification failed. Please try again.' });
+        }
 
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
@@ -126,9 +156,14 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
 });
 
 // POST /api/auth/forgot-password
-app.post('/api/auth/forgot-password', (req, res) => {
+app.post('/api/auth/forgot-password', async (req, res) => {
     try {
-        const { email, securityAnswer, newPassword } = req.body;
+        const { email, securityAnswer, newPassword, turnstileToken } = req.body;
+
+        const isValidCaptcha = await verifyTurnstileToken(turnstileToken);
+        if (!isValidCaptcha) {
+            return res.status(403).json({ error: 'CAPTCHA verification failed. Please try again.' });
+        }
 
         if (!email || !securityAnswer || !newPassword) {
             return res.status(400).json({ error: 'Email, security answer, and new password are required' });
@@ -164,9 +199,14 @@ app.post('/api/auth/forgot-password', (req, res) => {
 });
 
 // POST /api/auth/get-security-question — get the security question for an email
-app.post('/api/auth/get-security-question', (req, res) => {
+app.post('/api/auth/get-security-question', async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, turnstileToken } = req.body;
+
+        const isValidCaptcha = await verifyTurnstileToken(turnstileToken);
+        if (!isValidCaptcha) {
+            return res.status(403).json({ error: 'CAPTCHA verification failed. Please try again.' });
+        }
         if (!email) {
             return res.status(400).json({ error: 'Email is required' });
         }
@@ -503,7 +543,12 @@ if (smtpHost && smtpUser && smtpPass && contactTo) {
 
 app.post('/api/contact', async (req, res) => {
     try {
-        const { name, email, subject, message } = req.body;
+        const { name, email, subject, message, turnstileToken } = req.body;
+
+        const isValidCaptcha = await verifyTurnstileToken(turnstileToken);
+        if (!isValidCaptcha) {
+            return res.status(403).json({ error: 'CAPTCHA verification failed. Please try again.' });
+        }
 
         if (!name || !email || !message) {
             return res.status(400).json({ error: 'Name, email, and message are required' });

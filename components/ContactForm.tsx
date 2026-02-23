@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Send, X, Loader2, CheckCircle, AlertCircle, MessageSquare } from 'lucide-react';
 import emailjs from '@emailjs/browser';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 interface ContactFormProps {
     onClose: () => void;
@@ -16,10 +17,16 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
     const [sending, setSending] = useState(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
+    const [turnstileToken, setTurnstileToken] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim() || !email.trim() || !message.trim()) return;
+        if (!turnstileToken) {
+            setErrorMsg('Please complete the CAPTCHA');
+            setStatus('error');
+            return;
+        }
 
         setSending(true);
         setStatus('idle');
@@ -46,12 +53,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ name: name.trim(), email: email.trim(), subject: subject.trim(), message: message.trim() }),
+                body: JSON.stringify({ name: name.trim(), email: email.trim(), subject: subject.trim(), message: message.trim(), turnstileToken }),
             });
 
             setStatus('success');
             setSubject('');
             setMessage('');
+            setTurnstileToken('');
         } catch (err: any) {
             setStatus('error');
             setErrorMsg(err?.text || err.message || 'Error connecting to email service');
@@ -140,6 +148,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
                                     <AlertCircle className="w-4 h-4 mr-1" /> {errorMsg}
                                 </p>
                             )}
+
+                            <div className="flex justify-center scale-95 origin-center my-2">
+                                <Turnstile siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} onSuccess={(token) => setTurnstileToken(token)} options={{ theme: 'dark' }} />
+                            </div>
 
                             <button
                                 type="submit"

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Layers, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, ShieldQuestion, KeyRound, ArrowLeft, CheckCircle, MessageSquare } from 'lucide-react';
 import { register, login, getSecurityQuestion, resetPassword } from '../services/authService';
 import { ContactForm } from './ContactForm';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 const SECURITY_QUESTIONS = [
     'What was the name of your first pet?',
@@ -41,6 +42,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     const [forgotAnswer, setForgotAnswer] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [turnstileToken, setTurnstileToken] = useState('');
 
     const resetFields = () => {
         setError('');
@@ -56,6 +58,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         setForgotAnswer('');
         setNewPassword('');
         setConfirmNewPassword('');
+        setTurnstileToken('');
     };
 
     const switchMode = (m: AuthMode) => {
@@ -66,9 +69,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        if (!turnstileToken) {
+            setError('Please complete the CAPTCHA');
+            return;
+        }
         setLoading(true);
         try {
-            const data = await login(email, password);
+            const data = await login(email, password, turnstileToken);
             onAuthSuccess(data.user);
         } catch (err: any) {
             setError(err.message || 'An error occurred');
@@ -80,6 +87,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        if (!turnstileToken) {
+            setError('Please complete the CAPTCHA');
+            return;
+        }
         setLoading(true);
         try {
             if (password !== confirmPassword) {
@@ -97,7 +108,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                 setLoading(false);
                 return;
             }
-            const data = await register(name, email, password, securityQuestion, securityAnswer);
+            const data = await register(name, email, password, securityQuestion, securityAnswer, turnstileToken);
             onAuthSuccess(data.user);
         } catch (err: any) {
             setError(err.message || 'An error occurred');
@@ -109,10 +120,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     const handleForgotStep1 = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        if (!turnstileToken) {
+            setError('Please complete the CAPTCHA');
+            return;
+        }
         setLoading(true);
         try {
-            const data = await getSecurityQuestion(forgotEmail);
+            const data = await getSecurityQuestion(forgotEmail, turnstileToken);
             setFetchedQuestion(data.securityQuestion);
+            setTurnstileToken('');
             setMode('forgot-answer');
         } catch (err: any) {
             setError(err.message || 'An error occurred');
@@ -124,6 +140,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     const handleForgotStep2 = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        if (!turnstileToken) {
+            setError('Please complete the CAPTCHA');
+            return;
+        }
         setLoading(true);
         try {
             if (newPassword !== confirmNewPassword) {
@@ -136,7 +156,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                 setLoading(false);
                 return;
             }
-            await resetPassword(forgotEmail, forgotAnswer, newPassword);
+            await resetPassword(forgotEmail, forgotAnswer, newPassword, turnstileToken);
             setSuccess('Password has been reset! You can now sign in.');
             setTimeout(() => switchMode('login'), 2000);
         } catch (err: any) {
@@ -234,6 +254,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                                 <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
                             </div>
 
+                            <div className="flex justify-center scale-95 origin-center mt-2 mb-2">
+                                <Turnstile siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} onSuccess={(token) => setTurnstileToken(token)} options={{ theme: 'dark' }} />
+                            </div>
                             <button type="submit" disabled={loading}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
                             >
@@ -287,6 +310,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                                 </div>
                             </div>
 
+                            <div className="flex justify-center scale-95 origin-center mt-2 mb-2">
+                                <Turnstile siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} onSuccess={(token) => setTurnstileToken(token)} options={{ theme: 'dark' }} />
+                            </div>
                             <button type="submit" disabled={loading}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
                             >
@@ -302,6 +328,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                 <input type="email" placeholder="Email Address" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required className={inputClass} />
+                            </div>
+                            <div className="flex justify-center scale-95 origin-center mt-2 mb-2">
+                                <Turnstile siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} onSuccess={(token) => setTurnstileToken(token)} options={{ theme: 'dark' }} />
                             </div>
                             <button type="submit" disabled={loading}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
@@ -329,6 +358,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                 <input type="password" placeholder="Confirm New Password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required className={inputClass} />
+                            </div>
+                            <div className="flex justify-center scale-95 origin-center mt-2 mb-2">
+                                <Turnstile siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} onSuccess={(token) => setTurnstileToken(token)} options={{ theme: 'dark' }} />
                             </div>
                             <button type="submit" disabled={loading}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
