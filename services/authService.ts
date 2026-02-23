@@ -192,6 +192,13 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
     return data.users;
 }
 
+export async function adminDeleteUsers(userIds: number[]): Promise<{ success: boolean; deletedCount: number }> {
+    return apiFetch('/admin/users/delete', {
+        method: 'POST',
+        body: JSON.stringify({ userIds }),
+    });
+}
+
 export async function getAdminStations(): Promise<AdminStation[]> {
     const data = await apiFetch('/admin/stations');
     return data.stations;

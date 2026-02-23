@@ -648,6 +648,46 @@ app.get('/api/admin/stations', authMiddleware, adminMiddleware, (req, res) => {
     }
 });
 
+// Admin: delete multiple users
+app.post('/api/admin/users/delete', authMiddleware, adminMiddleware, (req, res) => {
+    try {
+        const { userIds } = req.body;
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ error: 'User IDs array is required' });
+        }
+
+        const db = getDb();
+
+        // Use a transaction for safe deletion of associated data
+        const deleteUsersTx = db.transaction((ids) => {
+            const placeholders = ids.map(() => '?').join(',');
+
+            // 1. Delete station collaborators where user is the collaborator
+            db.prepare(`DELETE FROM station_collaborators WHERE user_id IN (${placeholders})`).run(...ids);
+
+            // 2. Delete collaborations for stations OWNED by these users
+            db.prepare(`
+                DELETE FROM station_collaborators 
+                WHERE station_id IN (SELECT id FROM learning_stations WHERE user_id IN (${placeholders}))
+            `).run(...ids);
+
+            // 3. Delete learning stations owned by these users
+            db.prepare(`DELETE FROM learning_stations WHERE user_id IN (${placeholders})`).run(...ids);
+
+            // 4. Finally, delete the users themselves
+            const result = db.prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...ids);
+            return result.changes;
+        });
+
+        const deletedCount = deleteUsersTx(userIds);
+
+        res.json({ success: true, deletedCount });
+    } catch (err) {
+        console.error('Admin delete users error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Admin: Toggle publish status
 app.put('/api/admin/ls/:id/publish', authMiddleware, adminMiddleware, (req, res) => {
     try {

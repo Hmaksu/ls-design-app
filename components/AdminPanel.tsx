@@ -7,7 +7,7 @@ import {
 import {
     getAdminUsers, getAdminStations, getAdminMessages,
     getAdminStationCollaborators, adminShareStation, adminRemoveCollaborator,
-    adminTogglePublish, AdminUser, AdminStation, Collaborator
+    adminTogglePublish, adminDeleteUsers, AdminUser, AdminStation, Collaborator
 } from '../services/authService';
 
 interface ContactMessage {
@@ -34,6 +34,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     const [stations, setStations] = useState<AdminStation[]>([]);
     const [messages, setMessages] = useState<ContactMessage[]>([]);
     const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+
+    // User selection state
+    const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+    const [isDeletingUsers, setIsDeletingUsers] = useState(false);
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
     // Share management state
     const [expandedStationId, setExpandedStationId] = useState<string | null>(null);
@@ -78,7 +83,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
         }
     };
 
-    useEffect(() => { fetchData(); }, [tab]);
+    useEffect(() => {
+        fetchData();
+        setSelectedUserIds([]); // clear selection when tab changes
+        setLastSelectedIndex(null);
+    }, [tab]);
 
     const formatDate = (d: string) => {
         try {
@@ -103,6 +112,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
         s.owner_email.toLowerCase().includes(search.toLowerCase()) ||
         s.code.toLowerCase().includes(search.toLowerCase())
     );
+
+    // User Selection Handlers
+    const handleSelectAllUsers = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedUserIds(filteredUsers.map(u => u.id));
+        } else {
+            setSelectedUserIds([]);
+        }
+        setLastSelectedIndex(null);
+    };
+
+    const handleSelectUser = (id: number, index: number, isShiftKey: boolean) => {
+        if (isShiftKey && lastSelectedIndex !== null) {
+            const start = Math.min(lastSelectedIndex, index);
+            const end = Math.max(lastSelectedIndex, index);
+            const rangeIds = filteredUsers.slice(start, end + 1).map(u => u.id);
+
+            setSelectedUserIds(prev => {
+                // If it was already selected we just make sure everything in range is selected.
+                const newSelection = new Set([...prev, ...rangeIds]);
+                return Array.from(newSelection);
+            });
+        } else {
+            setSelectedUserIds(prev =>
+                prev.includes(id) ? prev.filter(userId => userId !== id) : [...prev, id]
+            );
+        }
+        setLastSelectedIndex(index);
+    };
+
+    const handleDeleteSelectedUsers = async () => {
+        if (selectedUserIds.length === 0) return;
+        const confirmMsg = `Are you sure you want to permanently delete ${selectedUserIds.length} user(s)? This will also delete all their learning stations and collaborations.`;
+        if (!window.confirm(confirmMsg)) return;
+
+        setIsDeletingUsers(true);
+        try {
+            await adminDeleteUsers(selectedUserIds);
+            setSelectedUserIds([]);
+            await fetchData();
+        } catch (err: any) {
+            alert('Failed to delete users: ' + err.message);
+        } finally {
+            setIsDeletingUsers(false);
+        }
+    };
 
     // Share management functions
     const toggleSharePanel = async (stationId: string) => {
@@ -176,7 +231,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                     {TABS.map(t => (
                         <button
                             key={t.key}
-                            onClick={() => { setTab(t.key); setSearch(''); setSelectedMessage(null); setExpandedStationId(null); }}
+                            onClick={() => { setTab(t.key); setSearch(''); setSelectedMessage(null); setExpandedStationId(null); setSelectedUserIds([]); setLastSelectedIndex(null); }}
                             className={`flex items-center space-x-2 px-5 py-3 text-sm font-medium transition-all border-b-2 ${tab === t.key
                                 ? 'text-blue-600 border-blue-600 bg-white'
                                 : 'text-slate-500 border-transparent hover:text-slate-700 hover:bg-white/50'
@@ -215,49 +270,85 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         <>
                             {/* ═══ USERS TAB ═══ */}
                             {tab === 'users' && (
-                                <table className="w-full">
-                                    <thead className="bg-slate-50 sticky top-0">
-                                        <tr>
-                                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
-                                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
-                                            <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
-                                            <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Stations</th>
-                                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {filteredUsers.length === 0 ? (
-                                            <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400">No users found</td></tr>
-                                        ) : (
-                                            filteredUsers.map(u => (
-                                                <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-3">
-                                                        <div className="flex items-center space-x-3">
-                                                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                                                {u.name.charAt(0).toUpperCase()}
+                                <div>
+                                    {/* Bulk Actions Bar */}
+                                    {selectedUserIds.length > 0 && (
+                                        <div className="bg-blue-50 px-6 py-3 border-b border-blue-100 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                                            <span className="text-sm font-medium text-blue-800 flex items-center">
+                                                <Users className="w-4 h-4 mr-2" />
+                                                {selectedUserIds.length} user{selectedUserIds.length > 1 ? 's' : ''} selected
+                                            </span>
+                                            <button
+                                                onClick={handleDeleteSelectedUsers}
+                                                disabled={isDeletingUsers}
+                                                className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
+                                            >
+                                                {isDeletingUsers ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserMinus className="w-4 h-4 mr-2" />}
+                                                Delete Selected
+                                            </button>
+                                        </div>
+                                    )}
+                                    <table className="w-full">
+                                        <thead className="bg-slate-50 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="px-6 py-3 w-12 border-b border-slate-200">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filteredUsers.length > 0 && selectedUserIds.length === filteredUsers.length}
+                                                        onChange={handleSelectAllUsers}
+                                                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                                    />
+                                                </th>
+                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">User</th>
+                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Email</th>
+                                                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Role</th>
+                                                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Stations</th>
+                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Joined</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {filteredUsers.length === 0 ? (
+                                                <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No users found</td></tr>
+                                            ) : (
+                                                filteredUsers.map((u, index) => (
+                                                    <tr key={u.id} className={`transition-colors ${selectedUserIds.includes(u.id) ? 'bg-blue-50/50' : 'hover:bg-slate-50'}`}>
+                                                        <td className="px-6 py-3 w-12 text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedUserIds.includes(u.id)}
+                                                                onChange={() => { }}
+                                                                onClick={(e) => handleSelectUser(u.id, index, e.shiftKey)}
+                                                                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                                            />
+                                                        </td>
+                                                        <td className="px-6 py-3">
+                                                            <div className="flex items-center space-x-3">
+                                                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                                                    {u.name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <span className="text-sm font-medium text-slate-800">{u.name}</span>
                                                             </div>
-                                                            <span className="text-sm font-medium text-slate-800">{u.name}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-3 text-sm text-slate-600">{u.email}</td>
-                                                    <td className="px-6 py-3 text-center">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                            {u.role}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-3 text-center">
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 font-medium">
-                                                            <Database className="w-3 h-3 mr-1" />{u.station_count}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-3 text-sm text-slate-500 flex items-center">
-                                                        <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-400" />{formatDate(u.created_at)}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                                        </td>
+                                                        <td className="px-6 py-3 text-sm text-slate-600">{u.email}</td>
+                                                        <td className="px-6 py-3 text-center">
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                                {u.role}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-3 text-center">
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 font-medium">
+                                                                <Database className="w-3 h-3 mr-1" />{u.station_count}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-3 text-sm text-slate-500 flex items-center">
+                                                            <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-400" />{formatDate(u.created_at)}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
 
                             {/* ═══ STATIONS TAB ═══ */}
@@ -293,8 +384,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                         onClick={() => handleTogglePublish(s)}
                                                         disabled={publishLoading[s.id]}
                                                         className={`ml-3 flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${s.is_published
-                                                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                                                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                                                             } disabled:opacity-50`}
                                                         title={s.is_published ? "Make Private" : "Make Public"}
                                                     >
