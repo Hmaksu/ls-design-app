@@ -3,6 +3,7 @@ import { Layers, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, ShieldQuest
 import { register, login, getSecurityQuestion, resetPassword } from '../services/authService';
 import { ContactForm } from './ContactForm';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { useTranslation } from 'react-i18next';
 
 const SECURITY_QUESTIONS = [
     'What was the name of your first pet?',
@@ -22,6 +23,7 @@ interface AuthPageProps {
 type AuthMode = 'login' | 'register' | 'forgot' | 'forgot-answer';
 
 export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
+    const { t } = useTranslation();
     const [mode, setMode] = useState<AuthMode>('login');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -70,7 +72,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         e.preventDefault();
         setError('');
         if (!turnstileToken) {
-            setError('Please complete the CAPTCHA');
+            setError(t('auth.errorCaptcha'));
             return;
         }
         setLoading(true);
@@ -88,23 +90,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         e.preventDefault();
         setError('');
         if (!turnstileToken) {
-            setError('Please complete the CAPTCHA');
+            setError(t('auth.errorCaptcha'));
             return;
         }
         setLoading(true);
         try {
             if (password !== confirmPassword) {
-                setError('Passwords do not match');
+                setError(t('auth.errorPasswordMatch'));
                 setLoading(false);
                 return;
             }
             if (password.length < 6) {
-                setError('Password must be at least 6 characters');
+                setError(t('auth.errorPasswordLength'));
                 setLoading(false);
                 return;
             }
             if (!securityAnswer.trim()) {
-                setError('Security answer is required');
+                setError(t('auth.errorSecurityAnswer'));
                 setLoading(false);
                 return;
             }
@@ -121,7 +123,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         e.preventDefault();
         setError('');
         if (!turnstileToken) {
-            setError('Please complete the CAPTCHA');
+            setError(t('auth.errorCaptcha'));
             return;
         }
         setLoading(true);
@@ -141,23 +143,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         e.preventDefault();
         setError('');
         if (!turnstileToken) {
-            setError('Please complete the CAPTCHA');
+            setError(t('auth.errorCaptcha'));
             return;
         }
         setLoading(true);
         try {
             if (newPassword !== confirmNewPassword) {
-                setError('Passwords do not match');
+                setError(t('auth.errorPasswordMatch'));
                 setLoading(false);
                 return;
             }
             if (newPassword.length < 6) {
-                setError('Password must be at least 6 characters');
+                setError(t('auth.errorPasswordLength'));
                 setLoading(false);
                 return;
             }
             await resetPassword(forgotEmail, forgotAnswer, newPassword, turnstileToken);
-            setSuccess('Password has been reset! You can now sign in.');
+            setSuccess(t('auth.successReset'));
             setTimeout(() => switchMode('login'), 2000);
         } catch (err: any) {
             setError(err.message || 'An error occurred');
@@ -183,8 +185,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                     <Layers className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight">Learning Station Designer</h1>
-                    <p className="text-xs text-slate-400">Based on ITU Learning Station Design Guide</p>
+                    <h1 className="text-2xl font-bold text-white tracking-tight">{t('auth.title')}</h1>
+                    <p className="text-xs text-slate-400">{t('auth.subtitle')}</p>
                 </div>
             </div>
 
@@ -202,7 +204,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                                     : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.03]'
                                     }`}
                             >
-                                Sign In
+                                {t('auth.signIn')}
                             </button>
                             <button
                                 onClick={() => switchMode('register')}
@@ -211,7 +213,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                                     : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.03]'
                                     }`}
                             >
-                                Register
+                                {t('auth.register')}
                             </button>
                         </div>
                     )}
@@ -222,7 +224,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                             <button onClick={() => switchMode('login')} className="text-slate-400 hover:text-white mr-3 transition-colors">
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
-                            <h2 className="text-sm font-semibold text-white tracking-wide">Reset Password</h2>
+                            <h2 className="text-sm font-semibold text-white tracking-wide">{t('auth.resetPasswordTitle')}</h2>
                         </div>
                     )}
 
@@ -247,11 +249,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                         <form onSubmit={handleLogin} className="px-8 pb-8 space-y-5">
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
+                                <input type="email" placeholder={t('auth.email')} value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
+                                <input type="password" placeholder={t('auth.password')} value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
                             </div>
 
                             <div className="flex justify-center scale-95 origin-center mt-2 mb-2">
@@ -260,11 +262,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                             <button type="submit" disabled={loading}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
                             >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>}
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>{t('auth.signIn')}</span><ArrowRight className="w-4 h-4" /></>}
                             </button>
 
                             <button type="button" onClick={() => switchMode('forgot')} className="w-full text-center text-xs text-slate-400 hover:text-cyan-400 transition-colors pt-1">
-                                Forgot your password?
+                                {t('auth.forgotPassword')}
                             </button>
                         </form>
                     )}
@@ -274,39 +276,40 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                         <form onSubmit={handleRegister} className="px-8 pb-8 space-y-4">
                             <div className="relative">
                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} />
+                                <input type="text" placeholder={t('auth.fullName')} value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} />
                             </div>
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
+                                <input type="email" placeholder={t('auth.email')} value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
+                                <input type="password" placeholder={t('auth.password')} value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className={inputClass} />
+                                <input type="password" placeholder={t('auth.confirmPassword')} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className={inputClass} />
                             </div>
 
                             {/* Security Question */}
                             <div className="border-t border-white/10 pt-4 mt-2">
                                 <p className="text-xs text-slate-400 mb-3 flex items-center">
                                     <ShieldQuestion className="w-4 h-4 mr-1.5 text-cyan-400" />
-                                    Security question (for password recovery)
+                                    {t('auth.securityQuestionDesc')}
                                 </p>
                                 <select
                                     value={securityQuestion}
                                     onChange={(e) => setSecurityQuestion(e.target.value)}
                                     className="w-full bg-white/[0.07] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all mb-3 appearance-none"
                                 >
-                                    {SECURITY_QUESTIONS.map(q => (
-                                        <option key={q} value={q} className="bg-slate-800 text-white">{q}</option>
-                                    ))}
+                                    {SECURITY_QUESTIONS.map((q, idx) => {
+                                        const keys = ['sq_pet', 'sq_city', 'sq_mother', 'sq_school', 'sq_book', 'sq_car', 'sq_movie', 'sq_street'];
+                                        return <option key={q} value={q} className="bg-slate-800 text-white">{t(`auth.${keys[idx]}`)}</option>
+                                    })}
                                 </select>
                                 <div className="relative">
                                     <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                    <input type="text" placeholder="Your answer" value={securityAnswer} onChange={(e) => setSecurityAnswer(e.target.value)} required className={inputClass} />
+                                    <input type="text" placeholder={t('auth.yourAnswer')} value={securityAnswer} onChange={(e) => setSecurityAnswer(e.target.value)} required className={inputClass} />
                                 </div>
                             </div>
 
@@ -316,7 +319,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                             <button type="submit" disabled={loading}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
                             >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Create Account</span><ArrowRight className="w-4 h-4" /></>}
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>{t('auth.createAccount')}</span><ArrowRight className="w-4 h-4" /></>}
                             </button>
                         </form>
                     )}
@@ -324,10 +327,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                     {/* ═══ FORGOT STEP 1: Enter Email ═══ */}
                     {mode === 'forgot' && (
                         <form onSubmit={handleForgotStep1} className="px-8 pb-8 space-y-5">
-                            <p className="text-sm text-slate-400">Enter your email address and we'll show your security question.</p>
+                            <p className="text-sm text-slate-400">{t('auth.enterEmailForgot')}</p>
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="email" placeholder="Email Address" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required className={inputClass} />
+                                <input type="email" placeholder={t('auth.email')} value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required className={inputClass} />
                             </div>
                             <div className="flex justify-center scale-95 origin-center mt-2 mb-2">
                                 <Turnstile siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} onSuccess={(token) => setTurnstileToken(token)} options={{ theme: 'dark' }} />
@@ -335,7 +338,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                             <button type="submit" disabled={loading}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
                             >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Continue</span><ArrowRight className="w-4 h-4" /></>}
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>{t('auth.continue')}</span><ArrowRight className="w-4 h-4" /></>}
                             </button>
                         </form>
                     )}
@@ -344,20 +347,30 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                     {mode === 'forgot-answer' && (
                         <form onSubmit={handleForgotStep2} className="px-8 pb-8 space-y-4">
                             <div className="bg-white/[0.05] border border-white/10 rounded-xl p-4">
-                                <p className="text-xs text-slate-400 mb-1">Your security question:</p>
-                                <p className="text-sm text-cyan-300 font-medium">{fetchedQuestion}</p>
+                                <p className="text-xs text-slate-400 mb-1">{t('auth.yourSecurityQuestion')}</p>
+                                <p className="text-sm text-cyan-300 font-medium">
+                                    {/* Map English text coming from backend to translated question */}
+                                    {(() => {
+                                        const idx = SECURITY_QUESTIONS.indexOf(fetchedQuestion);
+                                        if (idx !== -1) {
+                                            const keys = ['sq_pet', 'sq_city', 'sq_mother', 'sq_school', 'sq_book', 'sq_car', 'sq_movie', 'sq_street'];
+                                            return t(`auth.${keys[idx]}`);
+                                        }
+                                        return fetchedQuestion;
+                                    })()}
+                                </p>
                             </div>
                             <div className="relative">
                                 <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="text" placeholder="Your answer" value={forgotAnswer} onChange={(e) => setForgotAnswer(e.target.value)} required className={inputClass} />
+                                <input type="text" placeholder={t('auth.yourAnswer')} value={forgotAnswer} onChange={(e) => setForgotAnswer(e.target.value)} required className={inputClass} />
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className={inputClass} />
+                                <input type="password" placeholder={t('auth.newPassword')} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className={inputClass} />
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type="password" placeholder="Confirm New Password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required className={inputClass} />
+                                <input type="password" placeholder={t('auth.confirmNewPassword')} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required className={inputClass} />
                             </div>
                             <div className="flex justify-center scale-95 origin-center mt-2 mb-2">
                                 <Turnstile siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} onSuccess={(token) => setTurnstileToken(token)} options={{ theme: 'dark' }} />
@@ -365,7 +378,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                             <button type="submit" disabled={loading}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold py-3.5 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
                             >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Reset Password</span><ArrowRight className="w-4 h-4" /></>}
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>{t('auth.resetPasswordBtn')}</span><ArrowRight className="w-4 h-4" /></>}
                             </button>
                         </form>
                     )}
@@ -377,10 +390,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                         className="flex items-center space-x-1.5 px-4 py-2 text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-colors text-sm font-medium"
                     >
                         <MessageSquare className="w-4 h-4" />
-                        <span>Send Feedback</span>
+                        <span>{t('auth.sendFeedback')}</span>
                     </button>
                     <p className="text-center text-slate-500 text-xs">
-                        &copy; {new Date().getFullYear()} Learning Station Design Tool.
+                        &copy; {new Date().getFullYear()} {t('auth.footerText')}
                     </p>
                 </div>
             </div>

@@ -8,14 +8,15 @@ function getAI() {
   return ai;
 }
 
-export const generateObjectivesWithAI = async (subject: string, level: string): Promise<string[]> => {
+export const generateObjectivesWithAI = async (subject: string, level: string, language: string = 'en'): Promise<string[]> => {
   if (!apiKey) return ["API Key not found. Please check environment variables."];
 
   try {
+    const languagePrompt = language === 'tr' ? 'Respond in Turkish.' : 'Respond in English.';
     const prompt = `
       For the subject "${subject}" and level "${level}", within the context of the Learning Station model,
       write 3 SMART (Specific, Measurable, Achievable, Relevant, Time-bound) learning objectives.
-      Return only the objectives as a bulleted list. Do not add any other text. Respond in English.
+      Return only the objectives as a bulleted list. Do not add any other text. ${languagePrompt}
     `;
 
     const response = await getAI()!.models.generateContent({
@@ -32,10 +33,11 @@ export const generateObjectivesWithAI = async (subject: string, level: string): 
   }
 };
 
-export const generateModuleIdeasWithAI = async (objective: string): Promise<any> => {
+export const generateModuleIdeasWithAI = async (objective: string, language: string = 'en'): Promise<any> => {
   if (!apiKey) return null;
 
   try {
+    const languagePrompt = language === 'tr' ? 'Respond in Turkish.' : 'Respond in English.';
     const prompt = `
        Create a Learning Station module draft for the following learning objective: "${objective}".
        
@@ -46,7 +48,7 @@ export const generateModuleIdeasWithAI = async (objective: string): Promise<any>
          "learningOutcomes": ["Outcome 1", "Outcome 2"],
          "suggestedDeliveryModes": ["Lecture", "Case Study"] (English keywords)
        }
-       Return only JSON.
+       Return only JSON. ${languagePrompt}
      `;
 
     const response = await getAI()!.models.generateContent({

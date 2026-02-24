@@ -1,7 +1,10 @@
 import React from 'react';
-import { Layers } from 'lucide-react';
+import { Layers, Globe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t, i18n } = useTranslation();
   return (
     <div className="min-h-screen flex flex-col font-sans bg-white">
       <header className="bg-itu-blue text-white shadow-md sticky top-0 z-50">
@@ -9,12 +12,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <div className="flex items-center space-x-3">
             <Layers className="w-8 h-8 text-itu-cyan" />
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Learning Station Designer</h1>
-              <p className="text-xs text-slate-300">Based on ITU Learning Station Design Guide</p>
+              <h1 className="text-xl font-bold tracking-tight">{t('header.title')}</h1>
+              <p className="text-xs text-slate-300">{t('header.subtitle')}</p>
             </div>
           </div>
-          <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-            Pre-Alpha v2.2.0
+          <div className="flex items-center space-x-4">
+            <LanguageSwitcher variant="header" />
+            <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
+              Pre-Alpha v2.4.0
+            </div>
           </div>
         </div>
       </header>

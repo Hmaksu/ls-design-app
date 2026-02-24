@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { LSContextType, LSContent, DeliveryModeType } from '../../types';
 import { FileDown, Loader2, FileCode, FileText, Printer } from 'lucide-react';
 import { DELIVERY_MODE_LABELS, DELIVERY_MODE_ICONS } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 // Fetch Roboto font at runtime from Google CDN and convert to base64
 const ROBOTO_URL = 'https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.ttf';
@@ -25,6 +26,7 @@ async function getRobotoBase64(): Promise<string> {
 const ALL_MODES_REF = Object.values(DeliveryModeType);
 
 export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) => {
+    const { t } = useTranslation();
     const { currentLS } = context;
     const [downloading, setDownloading] = React.useState(false);
 
@@ -57,27 +59,27 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
     // --- Helper: Info Table Data ---
     const getInfoTableData = () => {
         return [
-            ['Code', currentLS.code],
-            ['Title', currentLS.title],
-            ['Subject', currentLS.subject],
-            ['Level', currentLS.level],
-            ['ECTS (Microcredential)', currentLS.ects],
-            ['Dates', `Design: ${currentLS.initialDesignDate} | Revision: ${currentLS.finalRevisionDate}`],
-            ['Keywords', currentLS.keywords],
-            ['Target Audience', currentLS.targetAudience],
-            ['Short Description', currentLS.description],
-            ['Learning Objectives (LObjs)', currentLS.objectives.map((o, i) => `${i + 1}. ${o.text}`).join('\n')],
-            ['Global Learning Outcomes (LOs)', currentLS.globalLearningOutcomes],
-            ['Related SDGs', currentLS.relatedSDGs],
-            ['Assessment Methods', currentLS.globalAssessmentMethods],
-            ['Calendar', currentLS.calendar],
-            ['Duration', `In-person: ${currentLS.durationInPerson} hours\nDigital: ${currentLS.durationDigital} hours`],
-            ['Prerequisites', currentLS.prerequisites],
-            ['Special Needs', currentLS.specialNeeds],
-            ['Materials & Resources', currentLS.materialsAndResources],
-            ['Quota', currentLS.quota],
-            ['Language', currentLS.language],
-            ['Notes', currentLS.notes]
+            [t('step4.code'), currentLS.code],
+            [t('step4.infoTitle'), currentLS.title],
+            [t('step4.subject'), currentLS.subject],
+            [t('step4.level'), currentLS.level === 'Basic' ? t('step1.levelBasic') : currentLS.level === 'Intermediate' ? t('step1.levelInter') : currentLS.level === 'Advanced' ? t('step1.levelAdv') : currentLS.level],
+            [t('step4.ects'), currentLS.ects],
+            [t('step4.dates'), `${t('step4.design')}: ${currentLS.initialDesignDate} | ${t('step4.revision')}: ${currentLS.finalRevisionDate}`],
+            [t('step4.keywords'), currentLS.keywords],
+            [t('step4.targetAudience'), currentLS.targetAudience],
+            [t('step4.shortDesc'), currentLS.description],
+            [t('step4.learningObj'), currentLS.objectives.map((o, i) => `${i + 1}. ${o.text}`).join('\n')],
+            [t('step4.globalOutcomes'), currentLS.globalLearningOutcomes],
+            [t('step4.relatedSDGs'), (currentLS.relatedSDGs || '').split(',').map(s => s.trim()).filter(Boolean).map(sdg => t(`sdgs.${sdg.split('.')[0]}` as any) || sdg).join('\n')],
+            [t('step4.assessmentMethods'), currentLS.globalAssessmentMethods],
+            [t('step4.calendar'), currentLS.calendar],
+            [t('step4.duration'), `${t('step4.inPerson')}: ${currentLS.durationInPerson} ${t('step4.hours')}\n${t('step4.digital')}: ${currentLS.durationDigital} ${t('step4.hours')}`],
+            [t('step4.prerequisites'), currentLS.prerequisites],
+            [t('step4.specialNeeds'), currentLS.specialNeeds],
+            [t('step4.materials'), currentLS.materialsAndResources],
+            [t('step4.quota'), currentLS.quota],
+            [t('step4.language'), currentLS.language],
+            [t('step4.notes'), currentLS.notes]
         ];
     };
 
@@ -110,8 +112,8 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
         </style>
     </head>
     <body>
-        <h1>LEARNING STATION DESIGN</h1>
-        <h2>INFORMATION TABLE</h2>
+        <h1>${t('step4.lsDesign')}</h1>
+        <h2>${t('step4.infoTable')}</h2>
         
         <!-- Table 1 -->
         <table>
@@ -119,8 +121,8 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
             <col style="width: 70%">
             <thead>
                 <tr>
-                    <th>Field</th>
-                    <th>Value</th>
+                    <th>${t('step4.field')}</th>
+                    <th>${t('step4.value')}</th>
                 </tr>
             </thead>
             <tbody>
@@ -128,13 +130,13 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
             </tbody>
         </table>
 
-        <h2>LS MATRIX</h2>
+        <h2>${t('step4.lsMatrix')}</h2>
         `;
 
         currentLS.modules.forEach((mod, modIdx) => {
             const activeModes = getActiveModesForModule(mod);
             const modeHeaders = activeModes.map(mode =>
-                `<th class="center" style="font-size: 9px; padding: 2px; writing-mode: vertical-rl; transform: rotate(180deg);">${DELIVERY_MODE_LABELS[mode]}</th>`
+                `<th class="center" style="font-size: 9px; padding: 2px; writing-mode: vertical-rl; transform: rotate(180deg);">${t(`deliveryModes.${mode}` as any) || DELIVERY_MODE_LABELS[mode]}</th>`
             ).join('');
 
             html += `
@@ -148,11 +150,11 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
 
                 <thead>
                     <tr>
-                        <th>MODULE ${modIdx + 1}</th>
-                        <th colspan="${activeModes.length}">DELIVERY MODES</th>
-                        <th>Duration</th>
-                        <th>Assessment</th>
-                        <th>Learning Outcomes</th>
+                        <th>${t('step4.module')} ${modIdx + 1}</th>
+                        <th colspan="${activeModes.length}">${t('step4.deliveryModes')}</th>
+                        <th>${t('step4.duration')}</th>
+                        <th>${t('step4.assessment')}</th>
+                        <th>${t('step4.outcomes')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -161,7 +163,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
             // 1. Module Title Row (with assessment + outcome inline)
             html += `
             <tr class="module-row">
-                <td colspan="${1 + activeModes.length + 1}">Module ${modIdx + 1}: ${mod.title}</td>
+                <td colspan="${1 + activeModes.length + 1}">${t('step4.module')} ${modIdx + 1}: ${mod.title}</td>
                 <td style="background-color: #e6e6e6; font-weight: bold; text-align: center;">${mod.assessmentMethods?.join(', ') || ''}</td>
                 <td style="background-color: #e6e6e6; font-weight: bold; text-align: center;">${mod.learningOutcome || ''}</td>
             </tr>
@@ -170,16 +172,16 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
             // 1.5 Sub-Headers (now repeated per module)
             html += `
             <tr class="mode-header-row">
-                <td class="center"><i>Content Title</i></td>
+                <td class="center"><i>${t('step4.contentTitle')}</i></td>
                 ${modeHeaders}
-                <td class="center"><i>Duration</i></td>
-                <td class="center"><i>Assessment</i></td>
-                <td class="center"><i>Outcomes</i></td>
+                <td class="center"><i>${t('step4.duration')}</i></td>
+                <td class="center"><i>${t('step4.assessment')}</i></td>
+                <td class="center"><i>${t('step4.outcomes')}</i></td>
             </tr>
             `;
 
             // 2. Objectives
-            let objectivesText = 'Related Learning Objectives: ';
+            let objectivesText = `${t('step4.relatedObjectives')}: `;
             if (mod.associatedObjectiveIds && mod.associatedObjectiveIds.length > 0) {
                 objectivesText += mod.associatedObjectiveIds
                     .map(id => {
@@ -188,7 +190,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                     })
                     .join(', ');
             } else {
-                objectivesText += "None";
+                objectivesText += t('step4.none');
             }
 
             html += `
@@ -199,13 +201,18 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
 
             // 3. Contents — each row has its own duration
             if (mod.contents.length === 0) {
-                html += `<tr><td colspan="${activeModes.length + 4}">(No Content)</td></tr>`;
+                html += `<tr><td colspan="${activeModes.length + 4}">(${t('step4.noContent')})</td></tr>`;
             } else {
                 // Calculate total rows for rowSpan
                 let totalRows = 0;
                 mod.contents.forEach(c => {
                     totalRows++;
-                    if (c.subContents) totalRows += c.subContents.length;
+                    if (c.subContents) {
+                        c.subContents.forEach(s => {
+                            totalRows++;
+                            if (s.subContents) totalRows += s.subContents.length;
+                        });
+                    }
                 });
 
                 let isFirstContentRow = true;
@@ -243,6 +250,11 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                     if (content.subContents) {
                         content.subContents.forEach((sub, sIdx) => {
                             html += createRowHtml(sub, `${modIdx + 1}.${cIdx + 1}.${sIdx + 1}`);
+                            if (sub.subContents) {
+                                sub.subContents.forEach((subSub, ssIdx) => {
+                                    html += createRowHtml(subSub, `${modIdx + 1}.${cIdx + 1}.${sIdx + 1}.${ssIdx + 1}`);
+                                });
+                            }
                         });
                     }
                 });
@@ -298,8 +310,8 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
             {/* --- TOP BAR ACTIONS --- */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 print:hidden">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-800">Export & Finalize</h2>
-                    <p className="text-sm text-slate-500">Download your Learning Station Matrix as HTML, DOC, or print natively to PDF.</p>
+                    <h2 className="text-xl font-bold text-slate-800">{t('step4.title')}</h2>
+                    <p className="text-sm text-slate-500">{t('step4.subtitle')}</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -307,7 +319,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                     {context.role === 'owner' && (
                         <div className="flex items-center space-x-3 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
                             <span className={`text-sm font-medium ${currentLS.isPublished ? 'text-emerald-700' : 'text-slate-600'}`}>
-                                {currentLS.isPublished ? 'Public' : 'Private'}
+                                {currentLS.isPublished ? t('step4.public') : t('step4.private')}
                             </span>
                             <button
                                 onClick={() => {
@@ -315,7 +327,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                 }}
                                 className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${currentLS.isPublished ? 'bg-emerald-500' : 'bg-slate-300'
                                     }`}
-                                title={currentLS.isPublished ? "Make private" : "Publish to community"}
+                                title={currentLS.isPublished ? t('step4.makePrivate') : t('step4.publishConf')}
                             >
                                 <span
                                     className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${currentLS.isPublished ? 'translate-x-5' : 'translate-x-1'
@@ -333,39 +345,37 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                             className="flex items-center gap-2 bg-[#ea580c] hover:bg-[#c2410c] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
                         >
                             <FileCode className="w-4 h-4" />
-                            HTML
+                            {t('step4.html')}
                         </button>
                         <button
                             onClick={() => downloadFile('doc')}
                             className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
                         >
                             <FileText className="w-4 h-4" />
-                            Word (DOC)
+                            {t('step4.word')}
                         </button>
                         <button
                             onClick={downloadPDF}
                             disabled={downloading}
                             className="flex items-center gap-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
-                            title="Prints the current view. Select 'Save as PDF' as the destination."
+                            title={t('step4.printTitle')}
                         >
                             {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-                            {downloading ? 'Preparing...' : 'Download PDF'}
+                            {downloading ? t('step4.preparing') : t('step4.downloadPDF')}
                         </button>
                     </div>
                 </div>
             </div >
 
             <div className="p-8 bg-slate-50 border border-slate-200 text-center rounded mb-8 print:hidden">
-                <p className="text-slate-600 mb-4">
-                    Your design is ready! Use the buttons above to download. Below is a <strong>live preview</strong> of the document.
-                </p>
+                <p className="text-slate-600 mb-4" dangerouslySetInnerHTML={{ __html: t('step4.previewDesc') }} />
             </div>
 
             {/* --- PREVIEW SECTION (Printable Area) --- */}
             <div className="border border-slate-300 shadow-lg bg-slate-200 p-8 overflow-auto max-h-[800px] print:max-h-none print:shadow-none print:border-none print:bg-white print:p-0 print:overflow-visible">
                 <div id="pdf-preview-container" className="bg-white p-10 font-sans shadow-sm print:shadow-none print:p-0" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                    <h1 className="text-2xl font-bold text-center text-itu-blue mb-2 font-sans tracking-wide">LEARNING STATION DESIGN</h1>
-                    <h2 className="text-xl font-bold text-center text-itu-blue mb-8 font-sans">INFORMATION TABLE</h2>
+                    <h1 className="text-2xl font-bold text-center text-itu-blue mb-2 font-sans tracking-wide">{t('step4.lsDesign')}</h1>
+                    <h2 className="text-xl font-bold text-center text-itu-blue mb-8 font-sans">{t('step4.infoTable')}</h2>
 
                     {/* Info Table */}
                     <table className="w-full border-collapse border border-black mb-12 text-sm font-sans">
@@ -379,10 +389,10 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                         </tbody>
                     </table>
 
-                    <h2 className="text-xl font-bold text-center text-itu-blue mb-8 font-sans">LS MATRIX</h2>
+                    <h2 className="text-xl font-bold text-center text-itu-blue mb-8 font-sans">{t('step4.lsMatrix')}</h2>
 
                     {/* Matrix Tables - Each module is an isolated table */}
-                    {currentLS.modules.length === 0 && <div className="text-center italic text-slate-500 py-4">No modules designed yet.</div>}
+                    {currentLS.modules.length === 0 && <div className="text-center italic text-slate-500 py-4">{t('step4.noModules')}</div>}
 
                     {currentLS.modules.map((mod, modIdx) => {
                         const activeModes = getActiveModesForModule(mod);
@@ -409,49 +419,49 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                     </colgroup>
                                     <thead>
                                         <tr className="bg-slate-100">
-                                            <th className="border border-black p-2 tracking-wider text-left">MODULE {modIdx + 1}</th>
-                                            <th className="border border-black p-2 tracking-wider bg-slate-200" colSpan={activeModes.length}>DELIVERY MODES</th>
-                                            <th className="border border-black p-2 tracking-wider">Duration</th>
-                                            <th className="border border-black p-2 tracking-wider">Assessment</th>
-                                            <th className="border border-black p-2 tracking-wider">Outcomes</th>
+                                            <th className="border border-black p-2 tracking-wider text-left">{t('step4.module').toUpperCase()} {modIdx + 1}</th>
+                                            <th className="border border-black p-2 tracking-wider bg-slate-200" colSpan={activeModes.length}>{t('step4.deliveryModes').toUpperCase()}</th>
+                                            <th className="border border-black p-2 tracking-wider">{t('step4.duration')}</th>
+                                            <th className="border border-black p-2 tracking-wider">{t('step4.assessment')}</th>
+                                            <th className="border border-black p-2 tracking-wider">{t('step4.outcomes')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {/* 1. Module Title Row */}
                                         <tr className="bg-slate-200 font-bold border-t-[3px] border-black">
-                                            <td className="border border-black p-2 uppercase text-center" colSpan={1 + activeModes.length + 3}>{mod.title || 'Untitled Module'}</td>
+                                            <td className="border border-black p-2 uppercase text-center" colSpan={1 + activeModes.length + 3}>{mod.title || t('step3.untitledContent')}</td>
                                         </tr>
 
                                         {/* 2. Headers Row */}
                                         <tr className="bg-slate-50 text-slate-600 text-[10px]">
-                                            <td className="border border-black p-1 text-right italic font-medium">Content Title</td>
+                                            <td className="border border-black p-1 text-right italic font-medium">{t('step4.contentTitle')}</td>
                                             {activeModes.map(mode => (
-                                                <td key={mode} className="border border-black p-1 text-center font-bold relative h-12" title={DELIVERY_MODE_LABELS[mode]}>
+                                                <td key={mode} className="border border-black p-1 text-center font-bold relative h-12" title={t(`deliveryModes.${mode}` as any) || DELIVERY_MODE_LABELS[mode]}>
                                                     <div className="absolute inset-0 flex items-center justify-center">
                                                         <span className="text-blue-600">{DELIVERY_MODE_ICONS[mode]}</span>
                                                     </div>
                                                 </td>
                                             ))}
-                                            <td className="border border-black p-1 text-center italic font-medium">Duration</td>
-                                            <td className="border border-black p-1 text-center italic font-medium">Assessment</td>
-                                            <td className="border border-black p-1 text-center italic font-medium">Outcomes</td>
+                                            <td className="border border-black p-1 text-center italic font-medium">{t('step4.duration')}</td>
+                                            <td className="border border-black p-1 text-center italic font-medium">{t('step4.assessment')}</td>
+                                            <td className="border border-black p-1 text-center italic font-medium">{t('step4.outcomes')}</td>
                                         </tr>
 
                                         {/* 3. Objectives Row */}
                                         <tr>
                                             <td className="border border-black p-2 italic text-slate-600 bg-slate-50/50" colSpan={1 + activeModes.length + 3}>
-                                                <span className="font-semibold mr-1">Related Objectives:</span>
+                                                <span className="font-semibold mr-1">{t('step4.relatedObjectives')}:</span>
                                                 {mod.associatedObjectiveIds.length > 0 ? mod.associatedObjectiveIds.map(id => {
                                                     const o = currentLS.objectives.find(x => x.id === id);
                                                     return o ? `[LObj: ${o.text}]` : '';
-                                                }).join(' • ') : 'None specified'}
+                                                }).join(' • ') : t('step4.none')}
                                             </td>
                                         </tr>
 
                                         {/* 4. Contents */}
                                         {mod.contents.length === 0 ? (
                                             <tr>
-                                                <td className="border border-black p-3 text-slate-400 italic text-center" colSpan={activeModes.length + 2}>(No Content)</td>
+                                                <td className="border border-black p-3 text-slate-400 italic text-center" colSpan={activeModes.length + 2}>({t('step4.noContent')})</td>
                                                 <td className="border border-black p-2 text-center text-[10px] bg-slate-50/30">{mod.assessmentMethods?.join(', ') || '-'}</td>
                                                 <td className="border border-black p-2 text-center text-[10px] bg-slate-50/30">{mod.learningOutcome || '-'}</td>
                                             </tr>
@@ -489,25 +499,48 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                                     </tr>
                                                     {(() => { isFirstRowForAssessment = false; return null; })()}
                                                     {content.subContents?.map((sub, sIdx) => (
-                                                        <tr key={sub.id}>
-                                                            <td className="border border-black p-1.5 pl-6 text-slate-700 italic border-l-2 border-l-slate-300">{modIdx + 1}.{cIdx + 1}.{sIdx + 1} {sub.title}</td>
-                                                            {activeModes.map(mode => {
-                                                                const hasMode = sub.deliveryModes.includes(mode);
-                                                                const linkUrl = sub.deliveryLinks?.[mode];
-                                                                return (
-                                                                    <td key={mode} className={`border border-black p-1 text-center align-middle ${hasMode ? 'bg-blue-50/60 font-bold' : ''}`}>
-                                                                        {hasMode && (
-                                                                            linkUrl ? (
-                                                                                <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
-                                                                            ) : (
-                                                                                <span className="text-slate-800">✓</span>
-                                                                            )
-                                                                        )}
-                                                                    </td>
-                                                                );
-                                                            })}
-                                                            <td className="border border-black p-1 text-center whitespace-nowrap text-slate-600">{sub.duration} min</td>
-                                                        </tr>
+                                                        <React.Fragment key={sub.id}>
+                                                            <tr>
+                                                                <td className="border border-black p-1.5 pl-6 text-slate-700 italic border-l-2 border-l-slate-300">{modIdx + 1}.{cIdx + 1}.{sIdx + 1} {sub.title}</td>
+                                                                {activeModes.map(mode => {
+                                                                    const hasMode = sub.deliveryModes.includes(mode);
+                                                                    const linkUrl = sub.deliveryLinks?.[mode];
+                                                                    return (
+                                                                        <td key={mode} className={`border border-black p-1 text-center align-middle ${hasMode ? 'bg-blue-50/60 font-bold' : ''}`}>
+                                                                            {hasMode && (
+                                                                                linkUrl ? (
+                                                                                    <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
+                                                                                ) : (
+                                                                                    <span className="text-slate-800">✓</span>
+                                                                                )
+                                                                            )}
+                                                                        </td>
+                                                                    );
+                                                                })}
+                                                                <td className="border border-black p-1 text-center whitespace-nowrap text-slate-600">{sub.duration} min</td>
+                                                            </tr>
+                                                            {sub.subContents?.map((subSub, ssIdx) => (
+                                                                <tr key={subSub.id}>
+                                                                    <td className="border border-black p-1 pl-10 text-slate-500 italic border-l-4 border-l-slate-200">{modIdx + 1}.{cIdx + 1}.{sIdx + 1}.{ssIdx + 1} {subSub.title}</td>
+                                                                    {activeModes.map(mode => {
+                                                                        const hasMode = subSub.deliveryModes.includes(mode);
+                                                                        const linkUrl = subSub.deliveryLinks?.[mode];
+                                                                        return (
+                                                                            <td key={mode} className={`border border-black p-1 text-center align-middle ${hasMode ? 'bg-blue-50/60 font-bold' : ''}`}>
+                                                                                {hasMode && (
+                                                                                    linkUrl ? (
+                                                                                        <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
+                                                                                    ) : (
+                                                                                        <span className="text-slate-800">✓</span>
+                                                                                    )
+                                                                                )}
+                                                                            </td>
+                                                                        );
+                                                                    })}
+                                                                    <td className="border border-black p-1 text-center whitespace-nowrap text-slate-500">{subSub.duration} min</td>
+                                                                </tr>
+                                                            ))}
+                                                        </React.Fragment>
                                                     ))}
                                                 </React.Fragment>
                                             ))

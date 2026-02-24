@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Plus, FolderOpen, Trash2, Clock, Layers, BookOpen,
+    Plus, FolderOpen, Trash2, Clock, Layers, BookOpen, Globe,
     Search, LogOut, User, Loader2, AlertCircle, Share2, Users, X, UserPlus, UserMinus, MessageSquare, Shield
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
     getStations, getPublishedStations, deleteStation, StationSummary,
     shareStation, getCollaborators, removeCollaborator, Collaborator
 } from '../services/authService';
 import { ContactForm } from './ContactForm';
 import { AdminPanel } from './AdminPanel';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface DashboardProps {
     user: { id: number; name: string; email: string; role?: string };
@@ -18,6 +20,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenStation, onLogout }) => {
+    const { t, i18n } = useTranslation();
     const [stations, setStations] = useState<StationSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -48,20 +51,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             setStations(myStations);
             setPublishedStations(communityStations);
         } catch (err: any) {
-            setError(err.message || 'Failed to load stations');
+            setError(err.message || t('dashboard.failedToLoad'));
         } finally {
             setLoading(false);
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this station?')) return;
+        if (!confirm(t('dashboard.confirmDelete'))) return;
         try {
             setDeletingId(id);
             await deleteStation(id);
             setStations(prev => prev.filter(s => s.id !== id));
         } catch (err: any) {
-            alert('Failed to delete: ' + err.message);
+            alert(t('dashboard.failedToDelete') + err.message);
         } finally {
             setDeletingId(null);
         }
@@ -101,7 +104,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             setCollaborators(prev => [...prev, data.collaborator]);
             setShareEmail('');
         } catch (err: any) {
-            setShareError(err.message || 'Failed to share');
+            setShareError(err.message || t('dashboard.failedToShare'));
         } finally {
             setShareLoading(false);
         }
@@ -113,7 +116,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             await removeCollaborator(shareModalStationId, userId);
             setCollaborators(prev => prev.filter(c => c.id !== userId));
         } catch (err: any) {
-            alert('Failed to remove: ' + err.message);
+            alert(t('dashboard.failedToRemove') + err.message);
         }
     };
 
@@ -129,17 +132,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             <header className="bg-white shadow-sm border-b border-slate-200">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Learning Stations Designer</h1>
-                        <p className="text-sm text-slate-500">Welcome back, {user.name}</p>
+                        <h1 className="text-2xl font-bold text-slate-800">{t('header.title')}</h1>
+                        <p className="text-sm text-slate-500">{t('dashboard.welcome')}, {user.name}</p>
                     </div>
                     <div className="flex items-center space-x-3">
+                        <LanguageSwitcher variant="dashboard" />
                         <button
                             onClick={() => setShowContactForm(true)}
                             className="flex items-center space-x-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Send Feedback"
                         >
                             <MessageSquare className="w-4 h-4" />
-                            <span className="text-sm font-medium">Feedback</span>
+                            <span className="text-sm font-medium">{t('nav.feedback')}</span>
                         </button>
                         {user.role === 'admin' && (
                             <button
@@ -160,7 +164,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             className="flex items-center space-x-1 px-3 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
                             <LogOut className="w-4 h-4" />
-                            <span className="text-sm">Logout</span>
+                            <span className="text-sm">{t('dashboard.logout')}</span>
                         </button>
                     </div>
                 </div>
@@ -175,14 +179,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             onClick={() => setActiveTab('mine')}
                             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'mine' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            My Learning Stations
+                            {t('dashboard.myStations')}
                         </button>
                         <button
                             onClick={() => setActiveTab('community')}
                             className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'community' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             <Users className="w-4 h-4" />
-                            <span>Community</span>
+                            <span>{t('dashboard.community')}</span>
                         </button>
                     </div>
 
@@ -192,7 +196,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search stations..."
+                                placeholder={t('dashboard.searchStations')}
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -204,7 +208,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                 className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
                             >
                                 <Plus className="w-4 h-4 mr-2" />
-                                New Station
+                                {t('dashboard.createNew')}
                             </button>
                         )}
                     </div>
@@ -223,15 +227,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                         <div className="text-center py-20">
                             <BookOpen className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                             <h3 className="text-lg font-medium text-slate-500 mb-2">
-                                {searchTerm ? 'No matching stations' : 'No stations yet'}
+                                {searchTerm ? t('dashboard.noMatchingStations') : t('dashboard.noStationsYet')}
                             </h3>
                             <p className="text-sm text-slate-400 mb-6">
-                                {searchTerm ? 'Try a different search term' : 'Create your first learning station to get started'}
+                                {searchTerm ? t('dashboard.tryDifferentSearch') : t('dashboard.createFirstStation')}
                             </p>
                             {!searchTerm && activeTab === 'mine' && (
                                 <button onClick={onCreateNew} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                                     <Plus className="w-4 h-4 inline mr-2" />
-                                    Create Station
+                                    {t('dashboard.createStation')}
                                 </button>
                             )}
                         </div>
@@ -246,7 +250,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onOpenStation(station.id)}>
                                             <div className="flex items-center space-x-2 mb-1">
                                                 <h3 className="text-lg font-semibold text-slate-800 truncate">
-                                                    {station.title || 'Untitled Station'}
+                                                    {station.title || t('dashboard.untitledStation')}
                                                 </h3>
                                                 {station.code && (
                                                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-mono">
@@ -256,18 +260,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                                 {station.role === 'collaborator' && (
                                                     <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium flex items-center">
                                                         <Users className="w-3 h-3 mr-1" />
-                                                        Shared{station.owner_name ? ` by ${station.owner_name}` : ''}
+                                                        {t('dashboard.shared')}{station.owner_name ? ` ${t('dashboard.sharedBy').toLowerCase()} ${station.owner_name}` : ''}
                                                     </span>
                                                 )}
                                                 {station.role === 'viewer' && (
                                                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded font-medium flex items-center">
                                                         <Users className="w-3 h-3 mr-1" />
-                                                        Published{station.owner_name ? ` by ${station.owner_name}` : ''}
+                                                        {t('dashboard.published')}{station.owner_name ? ` ${t('dashboard.publishedBy').toLowerCase()} ${station.owner_name}` : ''}
                                                     </span>
                                                 )}
                                             </div>
                                             <div className="flex items-center space-x-4 text-xs text-slate-500 mt-2">
-                                                <span className="flex items-center"><Layers className="w-3 h-3 mr-1" />{station.moduleCount} modules</span>
+                                                <span className="flex items-center"><Layers className="w-3 h-3 mr-1" />{station.moduleCount} {t('dashboard.modules')}</span>
                                                 {station.level && <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600">{station.level}</span>}
                                                 <span className="flex items-center"><Clock className="w-3 h-3 mr-1" />{formatDate(station.updated_at)}</span>
                                             </div>
@@ -319,7 +323,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center">
                                 <Share2 className="w-5 h-5 mr-2 text-blue-600" />
-                                Share Station
+                                {t('dashboard.shareStation')}
                             </h3>
                             <button onClick={() => setShareModalStationId(null)} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
                                 <X className="w-5 h-5 text-slate-400" />
@@ -331,7 +335,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <div className="flex space-x-2 mb-4">
                                 <input
                                     type="email"
-                                    placeholder="Enter email address..."
+                                    placeholder={t('dashboard.enterEmail')}
                                     value={shareEmail}
                                     onChange={e => setShareEmail(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleShare()}
@@ -356,12 +360,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <div className="border-t border-slate-100 pt-4">
                                 <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center">
                                     <Users className="w-4 h-4 mr-1" />
-                                    Collaborators ({collaborators.length})
+                                    {t('dashboard.collaborators')} ({collaborators.length})
                                 </h4>
                                 {collabLoading ? (
                                     <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 text-blue-500 animate-spin" /></div>
                                 ) : collaborators.length === 0 ? (
-                                    <p className="text-sm text-slate-400 text-center py-4">No collaborators yet. Add someone by email above.</p>
+                                    <p className="text-sm text-slate-400 text-center py-4">{t('dashboard.noCollabs')}</p>
                                 ) : (
                                     <div className="space-y-2 max-h-48 overflow-y-auto">
                                         {collaborators.map(collab => (

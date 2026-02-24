@@ -9,6 +9,7 @@ import {
     getAdminStationCollaborators, adminShareStation, adminRemoveCollaborator,
     adminTogglePublish, adminDeleteUsers, AdminUser, AdminStation, Collaborator
 } from '../services/authService';
+import { useTranslation } from 'react-i18next';
 
 interface ContactMessage {
     id: number;
@@ -26,6 +27,7 @@ interface AdminPanelProps {
 type AdminTab = 'users' | 'stations' | 'messages';
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
+    const { t } = useTranslation();
     const [tab, setTab] = useState<AdminTab>('users');
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -57,7 +59,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             const res = await adminTogglePublish(station.id, !station.is_published);
             setStations(prev => prev.map(s => s.id === station.id ? { ...s, is_published: res.is_published } : s));
         } catch (err: any) {
-            alert('Failed to update publish status: ' + err.message);
+            alert(t('admin.failedToUpdatePublish') + err.message);
         } finally {
             setPublishLoading(prev => ({ ...prev, [station.id]: false }));
         }
@@ -96,9 +98,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     };
 
     const TABS: { key: AdminTab; label: string; icon: React.ReactNode; count: number }[] = [
-        { key: 'users', label: 'Users', icon: <Users className="w-4 h-4" />, count: users.length },
-        { key: 'stations', label: 'Stations', icon: <Layers className="w-4 h-4" />, count: stations.length },
-        { key: 'messages', label: 'Messages', icon: <Inbox className="w-4 h-4" />, count: messages.length },
+        { key: 'users', label: t('admin.tabUsers'), icon: <Users className="w-4 h-4" />, count: users.length },
+        { key: 'stations', label: t('admin.tabStations'), icon: <Layers className="w-4 h-4" />, count: stations.length },
+        { key: 'messages', label: t('admin.tabMessages'), icon: <Inbox className="w-4 h-4" />, count: messages.length },
     ];
 
     const filteredUsers = users.filter(u =>
@@ -144,7 +146,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
     const handleDeleteSelectedUsers = async () => {
         if (selectedUserIds.length === 0) return;
-        const confirmMsg = `Are you sure you want to permanently delete ${selectedUserIds.length} user(s)? This will also delete all their learning stations and collaborations.`;
+        const confirmMsg = `${t('admin.confirmDeleteUsers')} ${selectedUserIds.length} ${t('admin.confirmDeleteUsers2')}`;
         if (!window.confirm(confirmMsg)) return;
 
         setIsDeletingUsers(true);
@@ -153,7 +155,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             setSelectedUserIds([]);
             await fetchData();
         } catch (err: any) {
-            alert('Failed to delete users: ' + err.message);
+            alert(t('admin.deleteFailed') + err.message);
         } finally {
             setIsDeletingUsers(false);
         }
@@ -191,7 +193,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             setCollaborators(prev => [...prev, data.collaborator]);
             setShareEmail('');
         } catch (err: any) {
-            setShareError(err.message || 'Failed to share');
+            setShareError(err.message || t('admin.failedToShare'));
         } finally {
             setShareLoading(false);
         }
@@ -203,7 +205,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             await adminRemoveCollaborator(expandedStationId, userId);
             setCollaborators(prev => prev.filter(c => c.id !== userId));
         } catch (err: any) {
-            alert('Failed to remove: ' + err.message);
+            alert(t('admin.failedToRemove') + err.message);
         }
     };
 
@@ -214,7 +216,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                 <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-800 to-slate-900 flex-shrink-0">
                     <h3 className="text-lg font-bold text-white flex items-center">
                         <Shield className="w-5 h-5 mr-2 text-cyan-400" />
-                        Admin Panel
+                        {t('admin.title')}
                     </h3>
                     <div className="flex items-center space-x-2">
                         <button onClick={fetchData} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors" title="Refresh">
@@ -251,7 +253,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder={tab === 'users' ? 'Search users by name or email...' : 'Search stations by title, code, or owner...'}
+                                placeholder={tab === 'users' ? t('admin.searchUsers') : t('admin.searchStations')}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
@@ -276,7 +278,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                         <div className="bg-blue-50 px-6 py-3 border-b border-blue-100 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
                                             <span className="text-sm font-medium text-blue-800 flex items-center">
                                                 <Users className="w-4 h-4 mr-2" />
-                                                {selectedUserIds.length} user{selectedUserIds.length > 1 ? 's' : ''} selected
+                                                {selectedUserIds.length} {t('admin.selectedUsers')}
                                             </span>
                                             <button
                                                 onClick={handleDeleteSelectedUsers}
@@ -284,7 +286,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                 className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
                                             >
                                                 {isDeletingUsers ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserMinus className="w-4 h-4 mr-2" />}
-                                                Delete Selected
+                                                {t('admin.deleteSelected')}
                                             </button>
                                         </div>
                                     )}
@@ -299,16 +301,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                         className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
                                                     />
                                                 </th>
-                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">User</th>
-                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Email</th>
-                                                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Role</th>
-                                                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Stations</th>
-                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Joined</th>
+                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">{t('admin.thUser')}</th>
+                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">{t('admin.thEmail')}</th>
+                                                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">{t('admin.thRole')}</th>
+                                                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">{t('admin.thStations')}</th>
+                                                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">{t('admin.thJoined')}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {filteredUsers.length === 0 ? (
-                                                <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No users found</td></tr>
+                                                <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">{t('admin.noUsersFound')}</td></tr>
                                             ) : (
                                                 filteredUsers.map((u, index) => (
                                                     <tr key={u.id} className={`transition-colors ${selectedUserIds.includes(u.id) ? 'bg-blue-50/50' : 'hover:bg-slate-50'}`}>
@@ -355,20 +357,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             {tab === 'stations' && (
                                 <div className="divide-y divide-slate-100">
                                     {filteredStations.length === 0 ? (
-                                        <div className="px-6 py-12 text-center text-slate-400">No stations found</div>
+                                        <div className="px-6 py-12 text-center text-slate-400">{t('admin.noStationsFound')}</div>
                                     ) : (
                                         filteredStations.map(s => (
                                             <div key={s.id}>
                                                 {/* Station Row */}
                                                 <div className="flex items-center px-6 py-3 hover:bg-slate-50 transition-colors">
                                                     <div className="flex-1 min-w-0 grid grid-cols-6 gap-4 items-center">
-                                                        <span className="text-sm font-medium text-slate-800 truncate">{s.title || '(Untitled)'}</span>
+                                                        <span className="text-sm font-medium text-slate-800 truncate">{s.title || t('admin.untitled')}</span>
                                                         <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600 text-center">{s.code || '—'}</span>
                                                         <div>
                                                             <p className="text-sm text-slate-700">{s.owner_name}</p>
                                                             <p className="text-xs text-slate-400">{s.owner_email}</p>
                                                         </div>
-                                                        <span className="text-sm text-slate-600 text-center">{s.moduleCount} modules</span>
+                                                        <span className="text-sm text-slate-600 text-center">{s.moduleCount} {t('admin.modules')}</span>
                                                         <span className="text-center">
                                                             {s.level ? (
                                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${s.level === 'Advanced' ? 'bg-red-50 text-red-700' : s.level === 'Intermediate' ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'}`}>
@@ -387,10 +389,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                             ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                                                             : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                                                             } disabled:opacity-50`}
-                                                        title={s.is_published ? "Make Private" : "Make Public"}
+                                                        title={s.is_published ? t('admin.makePrivate') : t('admin.makePublic')}
                                                     >
                                                         {publishLoading[s.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
-                                                        <span>{s.is_published ? 'Public' : 'Private'}</span>
+                                                        <span>{s.is_published ? t('admin.public') : t('admin.private')}</span>
                                                     </button>
                                                     <button
                                                         onClick={() => toggleSharePanel(s.id)}
@@ -398,10 +400,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                             ? 'bg-blue-100 text-blue-700'
                                                             : 'text-slate-500 hover:bg-slate-100 hover:text-blue-600'
                                                             }`}
-                                                        title="Manage sharing"
+                                                        title={t('admin.manageCollab')}
                                                     >
                                                         <Share2 className="w-3.5 h-3.5" />
-                                                        <span>Share</span>
+                                                        <span>{t('admin.share')}</span>
                                                         {expandedStationId === s.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                                     </button>
                                                 </div>
@@ -412,14 +414,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                         <div className="max-w-lg mx-auto py-4">
                                                             <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
                                                                 <Share2 className="w-4 h-4 mr-1.5 text-blue-600" />
-                                                                Manage Collaborators — {s.title || '(Untitled)'}
+                                                                {t('admin.manageCollabOf')} {s.title || t('admin.untitled')}
                                                             </h4>
 
                                                             {/* Add collaborator input */}
                                                             <div className="flex space-x-2 mb-3">
                                                                 <input
                                                                     type="email"
-                                                                    placeholder="Enter email to add..."
+                                                                    placeholder={t('admin.enterEmailToAdd')}
                                                                     value={shareEmail}
                                                                     onChange={e => setShareEmail(e.target.value)}
                                                                     onKeyDown={e => e.key === 'Enter' && handleAdminShare()}
@@ -444,7 +446,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                             {collabLoading ? (
                                                                 <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 text-blue-500 animate-spin" /></div>
                                                             ) : collaborators.length === 0 ? (
-                                                                <p className="text-sm text-slate-400 text-center py-3">No collaborators. Add by email above.</p>
+                                                                <p className="text-sm text-slate-400 text-center py-3">{t('admin.noCollabs')}</p>
                                                             ) : (
                                                                 <div className="space-y-2">
                                                                     {collaborators.map(collab => (
@@ -461,7 +463,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                                             <button
                                                                                 onClick={() => handleAdminRemoveCollab(collab.id)}
                                                                                 className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                                                title="Remove collaborator"
+                                                                                title={t('admin.removeCollab')}
                                                                             >
                                                                                 <UserMinus className="w-4 h-4" />
                                                                             </button>
@@ -484,7 +486,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                     {messages.length === 0 ? (
                                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
                                             <Inbox className="w-12 h-12 mb-3" />
-                                            <p className="text-lg font-medium">No messages yet</p>
+                                            <p className="text-lg font-medium">{t('admin.noMessagesYet')}</p>
                                         </div>
                                     ) : (
                                         <>
@@ -496,7 +498,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                         className={`px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-blue-50 transition-colors ${selectedMessage?.id === msg.id ? 'bg-blue-50 border-l-2 border-l-blue-600' : ''}`}
                                                     >
                                                         <p className="text-sm font-semibold text-slate-800 truncate">{msg.name}</p>
-                                                        <p className="text-xs text-slate-500 truncate">{msg.subject || '(No subject)'}</p>
+                                                        <p className="text-xs text-slate-500 truncate">{msg.subject || t('admin.noSubject')}</p>
                                                         <p className="text-[10px] text-slate-400 mt-1 flex items-center">
                                                             <Clock className="w-3 h-3 mr-1" />{formatDate(msg.created_at)}
                                                         </p>
@@ -507,7 +509,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                 {selectedMessage ? (
                                                     <div>
                                                         <div className="mb-4">
-                                                            <h4 className="text-xl font-bold text-slate-800">{selectedMessage.subject || '(No subject)'}</h4>
+                                                            <h4 className="text-xl font-bold text-slate-800">{selectedMessage.subject || t('admin.noSubject')}</h4>
                                                             <div className="flex items-center space-x-3 mt-2 text-sm text-slate-500">
                                                                 <span className="flex items-center">
                                                                     <Mail className="w-4 h-4 mr-1" />
@@ -527,7 +529,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center justify-center h-full text-slate-400">
-                                                        <p>Select a message to read</p>
+                                                        <p>{t('admin.selectMessage')}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -542,11 +544,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                 {/* Footer with stats */}
                 <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500 flex-shrink-0">
                     <span>
-                        {tab === 'users' && `${filteredUsers.length} user${filteredUsers.length !== 1 ? 's' : ''}`}
-                        {tab === 'stations' && `${filteredStations.length} station${filteredStations.length !== 1 ? 's' : ''}`}
-                        {tab === 'messages' && `${messages.length} message${messages.length !== 1 ? 's' : ''}`}
+                        {tab === 'users' && `${filteredUsers.length} ${t('admin.footerUsers')}`}
+                        {tab === 'stations' && `${filteredStations.length} ${t('admin.footerStations')}`}
+                        {tab === 'messages' && `${messages.length} ${t('admin.footerMessages')}`}
                     </span>
-                    <span className="text-slate-400">Learning Station Designer • Admin</span>
+                    <span className="text-slate-400">{t('admin.footerText')}</span>
                 </div>
             </div>
         </div>

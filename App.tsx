@@ -8,6 +8,8 @@ import { AuthPage } from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
 import { ContactForm } from './components/ContactForm';
 import { ChevronRight, ChevronLeft, Save, Upload, ArrowLeft, Download, MessageSquare } from 'lucide-react';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 import {
   isLoggedIn, getMe, logout as apiLogout,
   getStation, createStation, updateStation,
@@ -47,6 +49,7 @@ const createInitialLS = (): LearningStation => ({
 type AppView = 'auth' | 'dashboard' | 'editor';
 
 function App() {
+  const { t, i18n } = useTranslation();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [view, setView] = useState<AppView>('auth');
   const [currentLS, setCurrentLS] = useState<LearningStation>(createInitialLS());
@@ -400,17 +403,17 @@ function App() {
             <div>
               <div className="flex items-center space-x-3">
                 <h1 className="text-base font-bold tracking-tight">
-                  {currentLS.title || 'New Learning Station'}
+                  {currentLS.title || t('nav.creatingNew')}
                 </h1>
                 {autoSaving && (
                   <span className="text-xs flex items-center text-slate-300">
                     <div className="w-3 h-3 border-2 border-slate-300 border-t-transparent rounded-full animate-spin mr-1"></div>
-                    Saving...
+                    {t('buttons.saving')}
                   </span>
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                {editingId ? 'Editing' : 'Creating new'} • {currentLS.code || 'No code'}
+                {editingId ? t('nav.editing') : t('nav.creatingNew')} • {currentLS.code || t('nav.noCode')}
               </p>
             </div>
           </div>
@@ -421,13 +424,16 @@ function App() {
               title="Send Feedback"
             >
               <MessageSquare className="w-4 h-4" />
-              <span className="text-xs hidden sm:inline">Feedback</span>
+              <span className="text-xs hidden sm:inline">{t('nav.feedback')}</span>
             </button>
+            <div className="mr-2">
+              <LanguageSwitcher variant="header" />
+            </div>
             {user && (
               <span className="text-xs text-slate-300 mr-2">{user.name}</span>
             )}
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              Pre-Alpha v2.2.1
+              Pre-Alpha v2.4.0
             </div>
           </div>
         </div>
@@ -473,7 +479,7 @@ function App() {
                     className="flex items-center text-sm text-slate-500 hover:text-itu-blue px-3 py-1.5 rounded hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all"
                   >
                     <Upload className="w-4 h-4 mr-2" />
-                    Import JSON
+                    {t('buttons.importJson')}
                   </button>
                 </div>
               </div>
@@ -485,10 +491,10 @@ function App() {
                 />
               </div>
               <div className="flex justify-between text-xs text-slate-500 mt-1 px-1">
-                <span>Table 1 (Info)</span>
-                <span>Objectives</span>
-                <span>Modules & Content</span>
-                <span>Matrix & Output</span>
+                <span>{t('steps.1')}</span>
+                <span>{t('steps.2')}</span>
+                <span>{t('steps.3')}</span>
+                <span>{t('steps.4')}</span>
               </div>
             </div>
 
@@ -504,7 +510,7 @@ function App() {
                   }`}
               >
                 <ChevronLeft className="w-5 h-5 mr-2" />
-                Back
+                {t('buttons.back')}
               </button>
 
               <div className="flex space-x-4">
@@ -515,7 +521,7 @@ function App() {
                       className="flex items-center px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm"
                     >
                       <Download className="w-5 h-5 mr-2" />
-                      Save as JSON
+                      {t('buttons.saveJson')}
                     </button>
                     {role !== 'viewer' && (
                       <button
@@ -524,7 +530,7 @@ function App() {
                         className="flex items-center px-4 py-3 bg-itu-gold text-white rounded-lg hover:bg-yellow-600 shadow-sm disabled:opacity-50"
                       >
                         <Save className="w-5 h-5 mr-2" />
-                        {saving ? 'Saving...' : 'Save to Server'}
+                        {saving ? t('buttons.saving') : t('buttons.saveServer')}
                       </button>
                     )}
                   </>
@@ -536,7 +542,7 @@ function App() {
                   className={`flex items-center px-6 py-3 rounded-lg font-medium ${currentStep === 4 ? 'hidden' : 'bg-itu-blue text-white hover:bg-blue-900 shadow-lg'
                     }`}
                 >
-                  Next
+                  {t('buttons.next')}
                   <ChevronRight className="w-5 h-5 ml-2" />
                 </button>
               </div>

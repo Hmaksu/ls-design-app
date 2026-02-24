@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Send, X, Loader2, CheckCircle, AlertCircle, MessageSquare } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { useTranslation } from 'react-i18next';
 
 interface ContactFormProps {
     onClose: () => void;
@@ -10,6 +11,7 @@ interface ContactFormProps {
 }
 
 export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, userEmail }) => {
+    const { t } = useTranslation();
     const [name, setName] = useState(userName || '');
     const [email, setEmail] = useState(userEmail || '');
     const [subject, setSubject] = useState('');
@@ -23,7 +25,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
         e.preventDefault();
         if (!name.trim() || !email.trim() || !message.trim()) return;
         if (!turnstileToken) {
-            setErrorMsg('Please complete the CAPTCHA');
+            setErrorMsg(t('contact.errorCaptcha'));
             setStatus('error');
             return;
         }
@@ -62,7 +64,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
             setTurnstileToken('');
         } catch (err: any) {
             setStatus('error');
-            setErrorMsg(err?.text || err.message || 'Error connecting to email service');
+            setErrorMsg(err?.text || err.message || t('contact.errorConnect'));
         } finally {
             setSending(false);
         }
@@ -75,7 +77,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
                 <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-700">
                     <h3 className="text-lg font-bold text-white flex items-center">
                         <MessageSquare className="w-5 h-5 mr-2" />
-                        Contact / Feedback
+                        {t('contact.title')}
                     </h3>
                     <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
                         <X className="w-5 h-5 text-white" />
@@ -87,59 +89,59 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
                     {status === 'success' ? (
                         <div className="text-center py-8">
                             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                            <h4 className="text-xl font-bold text-slate-800 mb-2">Thank You!</h4>
-                            <p className="text-slate-500 mb-6">Your feedback has been sent successfully.</p>
+                            <h4 className="text-xl font-bold text-slate-800 mb-2">{t('contact.thankYou')}</h4>
+                            <p className="text-slate-500 mb-6">{t('contact.successMsg')}</p>
                             <button onClick={onClose} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                                Close
+                                {t('contact.close')}
                             </button>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.name')}</label>
                                     <input
                                         type="text"
                                         value={name}
                                         onChange={e => setName(e.target.value)}
                                         required
                                         className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Your name"
+                                        placeholder={t('contact.namePlaceholder')}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.email')}</label>
                                     <input
                                         type="email"
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
                                         required
                                         className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="your@email.com"
+                                        placeholder={t('contact.emailPlaceholder')}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Subject</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.subject')}</label>
                                 <input
                                     type="text"
                                     value={subject}
                                     onChange={e => setSubject(e.target.value)}
                                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="What's this about?"
+                                    placeholder={t('contact.subjectPlaceholder')}
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Message *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.message')}</label>
                                 <textarea
                                     value={message}
                                     onChange={e => setMessage(e.target.value)}
                                     required
                                     rows={5}
                                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                    placeholder="Your feedback, suggestions, or bug reports..."
+                                    placeholder={t('contact.messagePlaceholder')}
                                 />
                             </div>
 
@@ -159,9 +161,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({ onClose, userName, use
                                 className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                             >
                                 {sending ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t('contact.sending')}</>
                                 ) : (
-                                    <><Send className="w-4 h-4 mr-2" /> Send Feedback</>
+                                    <><Send className="w-4 h-4 mr-2" /> {t('contact.sendFeedback')}</>
                                 )}
                             </button>
                         </form>

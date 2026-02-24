@@ -2,19 +2,21 @@ import React, { useState } from 'react';
 import { LSContextType } from '../../types';
 import { Trash2, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { generateObjectivesWithAI } from '../../services/geminiService';
+import { useTranslation } from 'react-i18next';
 
 export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context }) => {
+  const { t, i18n } = useTranslation();
   const { currentLS, addObjective, updateObjective, removeObjective } = context;
   const [loadingAI, setLoadingAI] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
 
   const handleAI = async () => {
     if (!currentLS.subject) {
-      alert("Please specify a 'Subject' in step 1 first.");
+      alert(t('step2.aiError'));
       return;
     }
     setLoadingAI(true);
-    const suggestions = await generateObjectivesWithAI(currentLS.subject, currentLS.level);
+    const suggestions = await generateObjectivesWithAI(currentLS.subject, currentLS.level, i18n.language);
 
     // Auto-fill empty objectives or add new ones
     suggestions.forEach((text, index) => {
@@ -34,11 +36,11 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in">
       <div className="flex justify-between items-center mb-6 border-b pb-2">
-        <h2 className="text-2xl font-bold text-itu-blue">2. Learning Objectives</h2>
+        <h2 className="text-2xl font-bold text-itu-blue">{t('step2.title')}</h2>
       </div>
 
       <p className="text-slate-500 mb-6 text-sm">
-        Ensure your objectives are written within the SMART (Specific, Measurable, Achievable, Relevant, Time-bound) framework.
+        {t('step2.subtitle')}
       </p>
 
       <div className="space-y-4">
@@ -49,7 +51,7 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
               <textarea
                 value={obj.text}
                 onChange={(e) => updateObjective(obj.id, e.target.value)}
-                placeholder="What will learners achieve at the end of this station?"
+                placeholder={t('step2.placeholder')}
                 className="w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-md focus:ring-2 focus:ring-itu-cyan focus:border-transparent outline-none text-sm"
                 rows={2}
               />
@@ -57,7 +59,7 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
             <button
               onClick={() => removeObjective(obj.id)}
               className="mt-2 text-red-400 hover:text-red-600 transition-colors p-2"
-              title="Delete Objective"
+              title={t('step2.deleteObj')}
             >
               <Trash2 className="w-5 h-5" />
             </button>
@@ -70,7 +72,7 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
         className="mt-6 flex items-center justify-center w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-itu-cyan hover:text-itu-cyan transition-all"
       >
         <Plus className="w-5 h-5 mr-2" />
-        Add New Objective
+        {t('step2.addObj')}
       </button>
     </div>
   );
