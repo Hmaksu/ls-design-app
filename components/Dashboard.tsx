@@ -316,6 +316,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                 </div>
             </main>
 
+            <footer className="w-full text-slate-500 py-8 mt-auto border-t border-slate-200 bg-transparent">
+                <div className="container mx-auto px-4 flex flex-col items-center justify-center space-y-4">
+                    <a
+                        href="https://polen.itu.edu.tr/entities/publication/885d18fb-c6c0-4d0e-87d6-bd36b1781937"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                    >
+                        Learning Station Design Guide
+                    </a>
+                    <div className="text-center text-sm">
+                        <p>&copy; {new Date().getFullYear()} Learning Station Design Tool.</p>
+                    </div>
+                </div>
+            </footer>
+
             {/* ═══ Share Modal ═══ */}
             {shareModalStationId && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShareModalStationId(null)}>

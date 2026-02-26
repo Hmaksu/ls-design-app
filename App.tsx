@@ -433,7 +433,7 @@ function App() {
               <span className="text-xs text-slate-300 mr-2">{user.name}</span>
             )}
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              Pre-Alpha v2.4.0
+              Pre-Alpha v2.4.1
             </div>
           </div>
         </div>
@@ -552,8 +552,18 @@ function App() {
       </main>
 
       <footer className="bg-white text-slate-500 py-6 mt-auto border-t border-slate-100">
-        <div className="container mx-auto px-4 text-center text-sm">
-          <p>&copy; {new Date().getFullYear()} Learning Station Design Tool.</p>
+        <div className="container mx-auto px-4 flex flex-col items-center justify-center space-y-4">
+          <a
+            href="https://polen.itu.edu.tr/entities/publication/885d18fb-c6c0-4d0e-87d6-bd36b1781937"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 bg-itu-blue text-white rounded-md hover:opacity-90 transition-opacity text-sm font-medium shadow-sm"
+          >
+            Learning Station Design Guide
+          </a>
+          <div className="text-center text-sm">
+            <p>&copy; {new Date().getFullYear()} Learning Station Design Tool.</p>
+          </div>
         </div>
       </footer>
 

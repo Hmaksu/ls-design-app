@@ -4,6 +4,7 @@ import { register, login, getSecurityQuestion, resetPassword } from '../services
 import { ContactForm } from './ContactForm';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 const SECURITY_QUESTIONS = [
     'What was the name of your first pet?',
@@ -171,7 +172,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     const inputClass = "w-full bg-white/[0.07] border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all text-sm";
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 px-4">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 px-4 relative">
+            {/* Language Switcher */}
+            <div className="absolute top-6 right-6 z-50">
+                <LanguageSwitcher variant="header" />
+            </div>
+
             {/* Floating decorative elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
@@ -392,6 +398,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                         <MessageSquare className="w-4 h-4" />
                         <span>{t('auth.sendFeedback')}</span>
                     </button>
+                    <a
+                        href="https://polen.itu.edu.tr/entities/publication/885d18fb-c6c0-4d0e-87d6-bd36b1781937"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-md hover:bg-blue-600/30 transition-colors text-sm font-medium shadow-sm"
+                    >
+                        Learning Station Design Guide
+                    </a>
                     <p className="text-center text-slate-500 text-xs">
                         &copy; {new Date().getFullYear()} {t('auth.footerText')}
                     </p>
