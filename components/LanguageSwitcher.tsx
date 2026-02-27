@@ -8,7 +8,9 @@ const LANGUAGES = [
     { code: 'es', label: 'Español' },
     { code: 'fr', label: 'Français' },
     { code: 'de', label: 'Deutsch' },
-    { code: 'ro', label: 'Romanes' },
+    { code: 'ro', label: 'Română' },
+    { code: 'it', label: 'Italiano' },
+    { code: 'hu', label: 'Magyar' },
 ];
 
 interface LanguageSwitcherProps {

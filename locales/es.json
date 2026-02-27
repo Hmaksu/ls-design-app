@@ -151,7 +151,9 @@
         "deliveryLinks": "MÉTODOS DE ENTREGA Y ENLACES",
         "noDeliverySelected": "No hay modos seleccionados. Haz clic abajo para agregar.",
         "specifyMethod": "Especificar método...",
-        "addSubContent": "Agregar Subcontenido"
+        "addSubContent": "Agregar Subcontenido",
+        "collapseAll": "Contraer todo",
+        "expandAll": "Expandir todo"
     },
     "step4": {
         "title": "Exportar y Finalizar",

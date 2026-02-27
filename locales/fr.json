@@ -151,7 +151,9 @@
         "deliveryLinks": "MÉTHODES & LIENS",
         "noDeliverySelected": "Aucun mode sélectionné. Cliquez ci-dessous pour ajouter.",
         "specifyMethod": "Spécifier la méthode...",
-        "addSubContent": "Ajouter un sous-contenu"
+        "addSubContent": "Ajouter un sous-contenu",
+        "collapseAll": "Tout réduire",
+        "expandAll": "Tout développer"
     },
     "step4": {
         "title": "Exporter & Finaliser",

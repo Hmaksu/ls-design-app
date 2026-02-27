@@ -327,6 +327,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                         Learning Station Design Guide
                     </a>
                     <div className="text-center text-sm">
+                        <p>All translations were generated with AI. Please let us know if you notice any errors or inconsistencies.</p>
                         <p>&copy; {new Date().getFullYear()} Learning Station Design Tool.</p>
                     </div>
                 </div>

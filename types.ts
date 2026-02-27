@@ -61,7 +61,7 @@ export interface LearningObjective {
 export interface LSContent {
   id: string;
   title: string;
-  duration: number; // minutes
+  duration?: number; // minutes
   deliveryModes: DeliveryModeType[];
   deliveryLinks: Record<string, string>; // Key: DeliveryModeType, Value: URL
   customDeliveryMode?: string; // For OTHER type

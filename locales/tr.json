@@ -151,7 +151,9 @@
         "deliveryLinks": "İLETİM YÖNTEMLERİ VE LİNKLER",
         "noDeliverySelected": "Hiçbir iletim türü seçilmedi. Modül türü eklemek için aşağıdaki butonu kullanın.",
         "specifyMethod": "Yöntemi belirtin...",
-        "addSubContent": "Alt İçerik Ekle"
+        "addSubContent": "Alt İçerik Ekle",
+        "expandAll": "Tümünü Genişlet",
+        "collapseAll": "Tümünü Daralt"
     },
     "step4": {
         "title": "Dışa Aktar ve Tamamla",

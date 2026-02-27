@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LSContextType, BloomLevel, DeliveryModeType, LSModule, LSContent, LearningObjective } from '../../types';
 import { DELIVERY_MODE_ICONS, DELIVERY_MODE_LABELS } from '../../constants';
-import { Trash2, Plus, ChevronDown, ChevronUp, ChevronRight, Link as LinkIcon, Box, FileText, CornerDownRight, PenLine, ArrowUp, ArrowDown, X, Search, Check, ExternalLink, ListTree } from 'lucide-react';
+import { Trash2, Plus, ChevronDown, ChevronUp, ChevronRight, Link as LinkIcon, Box, FileText, CornerDownRight, PenLine, ArrowUp, ArrowDown, X, Search, Check, ExternalLink, ListTree, FoldVertical, UnfoldVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 // --- Sub-component: Delivery Mode Modal ---
@@ -117,8 +117,8 @@ const ContentFields: React.FC<{
           <label className="block text-xs font-bold text-slate-500 tracking-wide mb-1.5">{t('step3.durationMin')}</label>
           <input
             type="number"
-            value={content.duration}
-            onChange={(e) => onUpdate({ duration: parseInt(e.target.value) || 0 })}
+            value={content.duration ?? ''}
+            onChange={(e) => onUpdate({ duration: e.target.value === '' ? undefined : (parseInt(e.target.value, 10) || 0) })}
             className="w-full text-sm bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2.5 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all"
           />
         </div>
@@ -205,7 +205,7 @@ const SubSubContentCard: React.FC<{
             <div className="ml-3 flex items-center text-xs truncate max-w-[350px]">
               <span className="font-semibold text-slate-600 truncate">{subSub.title || t('step3.untitledContent')}</span>
               <span className="mx-2 text-slate-300 shrink-0">•</span>
-              <span className="text-slate-500 shrink-0">{subSub.duration} {t('step3.minutes')}</span>
+              <span className="text-slate-500 shrink-0">{subSub.duration ?? '-'} {t('step3.minutes')}</span>
             </div>
           )}
         </div>
@@ -245,7 +245,6 @@ const SubContentCard: React.FC<{
     const newSubSub: LSContent = {
       id: crypto.randomUUID(),
       title: '',
-      duration: 5,
       deliveryModes: [],
       deliveryLinks: {}
     };
@@ -284,7 +283,7 @@ const SubContentCard: React.FC<{
             <div className="ml-3 flex items-center text-sm truncate max-w-[400px]">
               <span className="font-semibold text-slate-700 truncate">{sub.title || t('step3.untitledContent')}</span>
               <span className="mx-2 text-slate-300 shrink-0">•</span>
-              <span className="text-slate-500 shrink-0">{sub.duration} {t('step3.minutes')}</span>
+              <span className="text-slate-500 shrink-0">{sub.duration ?? '-'} {t('step3.minutes')}</span>
               {sub.deliveryModes.length > 0 && (
                 <>
                   <span className="mx-2 text-slate-300 shrink-0">•</span>
@@ -359,7 +358,6 @@ const ContentCard: React.FC<{
     const newSub: LSContent = {
       id: crypto.randomUUID(),
       title: '',
-      duration: 5,
       deliveryModes: [],
       deliveryLinks: {}
     };
@@ -398,7 +396,7 @@ const ContentCard: React.FC<{
             <div className="ml-4 flex items-center text-sm truncate max-w-[600px]">
               <span className="font-bold text-slate-800 truncate">{content.title || t('step3.untitledContent')}</span>
               <span className="mx-2 text-slate-300 shrink-0">•</span>
-              <span className="text-slate-600 bg-white px-2 py-0.5 rounded text-xs font-bold border border-slate-200 shadow-sm shrink-0">{content.duration} {t('step3.minutes')}</span>
+              <span className="text-slate-600 bg-white px-2 py-0.5 rounded text-xs font-bold border border-slate-200 shadow-sm shrink-0">{content.duration ?? '-'} {t('step3.minutes')}</span>
 
               {content.deliveryModes.length > 0 && (
                 <>
@@ -471,16 +469,16 @@ const ModuleCard: React.FC<{
   isLast: boolean;
   isEven: boolean;
   globalObjectives: LearningObjective[];
-}> = ({ module, index, onUpdate, onRemove, onMove, isFirst, isLast, isEven, globalObjectives }) => {
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+}> = ({ module, index, onUpdate, onRemove, onMove, isFirst, isLast, isEven, globalObjectives, isExpanded, onToggleExpand }) => {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(true);
 
   // --- Content Handlers ---
   const addContent = () => {
     const newContent: LSContent = {
       id: crypto.randomUUID(),
       title: '',
-      duration: 15,
       deliveryModes: [],
       deliveryLinks: {},
       subContents: []
@@ -519,16 +517,16 @@ const ModuleCard: React.FC<{
 
   const totalDuration = module.contents.reduce((acc, c) => {
     let subDuration = (c.subContents || []).reduce((sAcc, s) => {
-      let ssDuration = (s.subContents || []).reduce((ssAcc, ss) => ssAcc + ss.duration, 0);
-      return sAcc + s.duration + ssDuration;
+      let ssDuration = (s.subContents || []).reduce((ssAcc, ss) => ssAcc + (ss.duration || 0), 0);
+      return sAcc + (s.duration || 0) + ssDuration;
     }, 0);
-    return acc + c.duration + subDuration;
+    return acc + (c.duration || 0) + subDuration;
   }, 0);
 
   return (
     <div id={`module-${module.id}`} className={`border border-slate-200 rounded-lg mb-6 transition-all shadow-sm hover:shadow-md scroll-mt-20 ${isEven ? 'bg-white' : 'bg-slate-50'}`}>
       {/* Header */}
-      <div className={`p-4 flex items-center justify-between cursor-pointer border-b border-slate-200 rounded-t-lg sticky top-[60px] z-40 shadow-sm ${isEven ? 'bg-white' : 'bg-slate-100'}`} onClick={() => setExpanded(!expanded)}>
+      <div className={`p-4 flex items-center justify-between cursor-pointer border-b border-slate-200 rounded-t-lg sticky top-[60px] z-40 shadow-sm ${isEven ? 'bg-white' : 'bg-slate-100'}`} onClick={onToggleExpand}>
         <div className="flex items-center space-x-4">
           <div className="flex flex-col items-center justify-center bg-itu-blue/10 w-12 h-12 rounded-lg text-itu-blue">
             <span className="text-xs font-bold">MOD</span>
@@ -569,11 +567,11 @@ const ModuleCard: React.FC<{
           >
             <Trash2 className="w-4 h-4" />
           </button>
-          {expanded ? <ChevronUp className="w-5 h-5 text-slate-400 ml-1" /> : <ChevronDown className="w-5 h-5 text-slate-400 ml-1" />}
+          {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400 ml-1" /> : <ChevronDown className="w-5 h-5 text-slate-400 ml-1" />}
         </div>
       </div>
 
-      {expanded && (
+      {isExpanded && (
         <div className="p-6">
           {/* Module Meta Data */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 border-b border-slate-100 pb-6">
@@ -683,6 +681,29 @@ const ModuleCard: React.FC<{
 export const Step3Modules: React.FC<{ context: LSContextType }> = ({ context }) => {
   const { t } = useTranslation();
   const { currentLS, addModule, updateModule, removeModule, moveModule } = context;
+  const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
+
+  // Initialize all to collapsed (false) if empty
+  React.useEffect(() => {
+    if (currentLS.modules.length > 0 && Object.keys(expandedModules).length === 0) {
+      const initial: Record<string, boolean> = {};
+      currentLS.modules.forEach(m => { initial[m.id] = false; });
+      setExpandedModules(initial);
+    }
+  }, [currentLS.modules]);
+
+  const toggleModule = (id: string) => {
+    setExpandedModules(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const allExpanded = currentLS.modules.length > 0 && currentLS.modules.every(m => expandedModules[m.id] !== false);
+
+  const toggleAll = () => {
+    const nextState = !allExpanded;
+    const newState: Record<string, boolean> = {};
+    currentLS.modules.forEach(m => { newState[m.id] = nextState; });
+    setExpandedModules(newState);
+  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in">
@@ -691,13 +712,26 @@ export const Step3Modules: React.FC<{ context: LSContextType }> = ({ context }) 
           <h2 className="text-2xl font-bold text-itu-blue">{t('step3.title')}</h2>
           <p className="text-slate-500 mt-1">{t('step3.subtitle')}</p>
         </div>
-        <button
-          onClick={addModule}
-          className="flex items-center px-4 py-2 bg-itu-blue text-white rounded-lg hover:bg-blue-800 transition-colors font-medium shadow-md"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          {t('step3.addModule')}
-        </button>
+        <div className="flex gap-2">
+          {currentLS.modules.length > 0 && (
+            <button
+              onClick={toggleAll}
+              className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-200 transition-colors font-medium shadow-sm"
+              title={allExpanded ? t('step3.collapseAll', 'Collapse All') : t('step3.expandAll', 'Expand All')}
+            >
+              {allExpanded ? <FoldVertical className="w-5 h-5 mr-2" /> : <UnfoldVertical className="w-5 h-5 mr-2" />}
+              <span className="hidden sm:inline">{allExpanded ? t('step3.collapseAll', 'Collapse All') : t('step3.expandAll', 'Expand All')}</span>
+            </button>
+          )}
+          <button
+            onClick={addModule}
+            className="flex items-center px-4 py-2 bg-itu-blue text-white rounded-lg hover:bg-blue-800 transition-colors font-medium shadow-md"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            <span className="hidden sm:inline">{t('step3.addModule')}</span>
+            <span className="sm:hidden">{t('step3.add')}</span>
+          </button>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -721,6 +755,8 @@ export const Step3Modules: React.FC<{ context: LSContextType }> = ({ context }) 
             isLast={index === currentLS.modules.length - 1}
             isEven={index % 2 === 0}
             globalObjectives={currentLS.objectives}
+            isExpanded={expandedModules[module.id] === true}
+            onToggleExpand={() => toggleModule(module.id)}
           />
         ))}
       </div>

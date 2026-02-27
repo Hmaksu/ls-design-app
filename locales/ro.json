@@ -151,7 +151,9 @@
         "deliveryLinks": "METODE & LINKURI",
         "noDeliverySelected": "Niciun mod selectat. Adaugă unul mai jos.",
         "specifyMethod": "Specifică metoda...",
-        "addSubContent": "Adaugă sub-conținut"
+        "addSubContent": "Adaugă sub-conținut",
+        "collapseAll": "Restrânge tot",
+        "expandAll": "Extinde tot"
     },
     "step4": {
         "title": "Exportă & Finalizează",

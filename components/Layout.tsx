@@ -19,7 +19,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <div className="flex items-center space-x-4">
             <LanguageSwitcher variant="header" />
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              Pre-Alpha v2.4.2
+              Pre-Alpha v2.4.3
             </div>
           </div>
         </div>
@@ -40,6 +40,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             Learning Station Design Guide
           </a>
           <div className="text-center text-sm">
+            <p>All translations were generated with AI. Please let us know if you notice any errors or inconsistencies.</p>
             <p>&copy; {new Date().getFullYear()} Learning Station Design Tool.</p>
           </div>
         </div>

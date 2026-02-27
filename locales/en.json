@@ -151,7 +151,9 @@
         "deliveryLinks": "DELIVERY METHODS & LINKS",
         "noDeliverySelected": "No delivery modes selected. Click the button below to add.",
         "specifyMethod": "Specify method...",
-        "addSubContent": "Add Sub-Content"
+        "addSubContent": "Add Sub-Content",
+        "collapseAll": "Collapse All",
+        "expandAll": "Expand All"
     },
     "step4": {
         "title": "Export & Finalize",
