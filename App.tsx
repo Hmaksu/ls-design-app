@@ -7,7 +7,7 @@ import { Step4Matrix } from './components/Steps/Step4Matrix';
 import { AuthPage } from './components/AuthPage';
 import { Dashboard } from './components/Dashboard';
 import { ContactForm } from './components/ContactForm';
-import { ChevronRight, ChevronLeft, Save, Upload, ArrowLeft, Download, MessageSquare } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Save, Upload, ArrowLeft, Download, MessageSquare, Undo2, Redo2 } from 'lucide-react';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import {
@@ -59,6 +59,8 @@ function App() {
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [past, setPast] = useState<LearningStation[]>([]);
+  const [future, setFuture] = useState<LearningStation[]>([]);
   const lastSavedDataRef = useRef<string>('');
   const [authLoading, setAuthLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +118,8 @@ function App() {
     setUser(null);
     setView('auth');
     setCurrentLS(createInitialLS());
+    setPast([]);
+    setFuture([]);
     setEditingId(null);
     window.history.replaceState({ view: 'auth', step: 1 }, '', '#/');
   };
@@ -124,6 +128,8 @@ function App() {
   const handleCreateNew = () => {
     const fresh = createInitialLS();
     setCurrentLS(fresh);
+    setPast([]);
+    setFuture([]);
     setEditingId(null);
     setRole('owner');
     setCurrentStep(1);
@@ -136,6 +142,8 @@ function App() {
     try {
       const result = await getStation(id);
       setCurrentLS(result.station.data);
+      setPast([]);
+      setFuture([]);
       setRole(result.role as any);
       setEditingId(id);
       setView('editor');
@@ -159,8 +167,33 @@ function App() {
   };
 
   // ═══ LS Operations ═══
+  const setLSWithHistory = (updater: LearningStation | ((prev: LearningStation) => LearningStation)) => {
+    setCurrentLS(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      setPast(p => [...p, prev]);
+      setFuture([]); // Clear future
+      return next;
+    });
+  };
+
+  const undo = () => {
+    if (past.length === 0) return;
+    const previous = past[past.length - 1];
+    setPast(past.slice(0, past.length - 1));
+    setFuture([currentLS, ...future]);
+    setCurrentLS(previous);
+  };
+
+  const redo = () => {
+    if (future.length === 0) return;
+    const next = future[0];
+    setFuture(future.slice(1));
+    setPast([...past, currentLS]);
+    setCurrentLS(next);
+  };
+
   const updateLS = (data: Partial<LearningStation>) => {
-    setCurrentLS(prev => ({ ...prev, ...data, updatedAt: new Date().toISOString() }));
+    setLSWithHistory(prev => ({ ...prev, ...data, updatedAt: new Date().toISOString() }));
   };
 
   const addModule = () => {
@@ -174,28 +207,28 @@ function App() {
       assessmentMethods: [],
       description: ''
     };
-    setCurrentLS(prev => ({
+    setLSWithHistory(prev => ({
       ...prev,
       modules: [...prev.modules, newModule]
     }));
   };
 
   const updateModule = (id: string, data: Partial<LSModule>) => {
-    setCurrentLS(prev => ({
+    setLSWithHistory(prev => ({
       ...prev,
       modules: prev.modules.map(m => m.id === id ? { ...m, ...data } : m)
     }));
   };
 
   const removeModule = (id: string) => {
-    setCurrentLS(prev => ({
+    setLSWithHistory(prev => ({
       ...prev,
       modules: prev.modules.filter(m => m.id !== id)
     }));
   };
 
   const moveModule = (index: number, direction: 'up' | 'down') => {
-    setCurrentLS(prev => {
+    setLSWithHistory(prev => {
       const newModules = [...prev.modules];
       if (direction === 'up' && index > 0) {
         [newModules[index - 1], newModules[index]] = [newModules[index], newModules[index - 1]];
@@ -220,21 +253,21 @@ function App() {
   };
 
   const addObjective = () => {
-    setCurrentLS(prev => ({
+    setLSWithHistory(prev => ({
       ...prev,
       objectives: [...prev.objectives, { id: crypto.randomUUID(), text: '', isSmart: false }]
     }));
   };
 
   const updateObjective = (id: string, text: string) => {
-    setCurrentLS(prev => ({
+    setLSWithHistory(prev => ({
       ...prev,
       objectives: prev.objectives.map(o => o.id === id ? { ...o, text } : o)
     }));
   };
 
   const removeObjective = (id: string) => {
-    setCurrentLS(prev => ({
+    setLSWithHistory(prev => ({
       ...prev,
       objectives: prev.objectives.filter(o => o.id !== id)
     }));
@@ -317,6 +350,8 @@ function App() {
           // Assign a new ID to avoid conflicts
           const imported = { ...createInitialLS(), ...json, id: crypto.randomUUID() };
           setCurrentLS(imported);
+          setPast([]);
+          setFuture([]);
           setEditingId(null); // treat as new
           setCurrentStep(1);
           setView('editor');
@@ -346,7 +381,11 @@ function App() {
     addObjective,
     updateObjective,
     removeObjective,
-    saveLS
+    saveLS,
+    undo,
+    redo,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0
   };
 
   const renderStep = () => {
@@ -418,6 +457,48 @@ function App() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <div className="flex items-center bg-itu-blue/30 rounded px-1 py-1 mr-2 hidden sm:flex">
+              <button
+                onClick={undo}
+                disabled={past.length === 0}
+                className="p-1 text-white hover:bg-white/20 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                title="Undo"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={redo}
+                disabled={future.length === 0}
+                className="p-1 text-white hover:bg-white/20 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                title="Redo"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+              <div className="w-px h-6 bg-white/20 mr-2 hidden sm:block"></div>
+            </div>
+            {role !== 'viewer' && (
+              <button
+                onClick={saveLS}
+                disabled={saving}
+                className="flex items-center px-2 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded transition-colors mr-1 text-sm disabled:opacity-50"
+                title={t('buttons.saveServer')}
+              >
+                {saving ? (
+                  <div className="w-4 h-4 border-2 border-slate-300 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <Save className="w-4 h-4 sm:mr-1.5" />
+                )}
+                <span className="hidden sm:inline">{saving ? t('buttons.saving') : t('buttons.saveServer')}</span>
+              </button>
+            )}
+            <button
+              onClick={saveAsJSON}
+              className="flex items-center px-2 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded transition-colors mr-2 text-sm"
+              title={t('buttons.saveJson')}
+            >
+              <Download className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">{t('buttons.saveJson')}</span>
+            </button>
             <button
               onClick={() => setShowContactForm(true)}
               className="flex items-center space-x-1 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded transition-colors mr-2"
@@ -514,28 +595,6 @@ function App() {
               </button>
 
               <div className="flex space-x-4">
-                {currentStep === 4 && (
-                  <>
-                    <button
-                      onClick={saveAsJSON}
-                      className="flex items-center px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm"
-                    >
-                      <Download className="w-5 h-5 mr-2" />
-                      {t('buttons.saveJson')}
-                    </button>
-                    {role !== 'viewer' && (
-                      <button
-                        onClick={saveLS}
-                        disabled={saving}
-                        className="flex items-center px-4 py-3 bg-itu-gold text-white rounded-lg hover:bg-yellow-600 shadow-sm disabled:opacity-50"
-                      >
-                        <Save className="w-5 h-5 mr-2" />
-                        {saving ? t('buttons.saving') : t('buttons.saveServer')}
-                      </button>
-                    )}
-                  </>
-                )}
-
                 <button
                   onClick={() => { const s = Math.min(4, currentStep + 1); setCurrentStep(s); pushNav('editor', s); }}
                   disabled={currentStep === 4}

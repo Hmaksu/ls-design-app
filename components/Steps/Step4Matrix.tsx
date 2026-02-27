@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { LSContextType, LSContent, DeliveryModeType } from '../../types';
-import { FileDown, Loader2, FileCode, FileText, Printer } from 'lucide-react';
+import { FileDown, Loader2, FileCode, FileText, Printer, Save, Download } from 'lucide-react';
 import { DELIVERY_MODE_LABELS, DELIVERY_MODE_ICONS } from '../../constants';
 import { useTranslation } from 'react-i18next';
 
@@ -337,33 +337,6 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                         </div>
                     )}
 
-                    <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => downloadFile('html')}
-                            className="flex items-center gap-2 bg-[#ea580c] hover:bg-[#c2410c] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
-                        >
-                            <FileCode className="w-4 h-4" />
-                            {t('step4.html')}
-                        </button>
-                        <button
-                            onClick={() => downloadFile('doc')}
-                            className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
-                        >
-                            <FileText className="w-4 h-4" />
-                            {t('step4.word')}
-                        </button>
-                        <button
-                            onClick={downloadPDF}
-                            disabled={downloading}
-                            className="flex items-center gap-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
-                            title={t('step4.printTitle')}
-                        >
-                            {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-                            {downloading ? t('step4.preparing') : t('step4.downloadPDF')}
-                        </button>
-                    </div>
                 </div>
             </div >
 
@@ -550,6 +523,65 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                             </div>
                         );
                     })}
+                </div>
+            </div>
+
+            {/* --- BOTTOM EXPORT ACTIONS --- */}
+            <div className="mt-8 flex flex-col sm:flex-row justify-between items-center print:hidden border-t border-slate-200 pt-6 gap-4">
+                <div className="flex gap-3">
+                    {context.role !== 'viewer' && (
+                        <button
+                            onClick={context.saveLS}
+                            className="flex items-center gap-2 bg-itu-gold hover:bg-yellow-600 text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
+                        >
+                            <Save className="w-4 h-4" />
+                            {t('buttons.saveServer')}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => {
+                            const json = JSON.stringify(currentLS, null, 2);
+                            const blob = new Blob([json], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `LS-${currentLS.code || 'Draft'}.json`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                        }}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
+                    >
+                        <Download className="w-4 h-4" />
+                        {t('buttons.saveJson')}
+                    </button>
+                </div>
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => downloadFile('html')}
+                        className="flex items-center gap-2 bg-[#ea580c] hover:bg-[#c2410c] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
+                    >
+                        <FileCode className="w-4 h-4" />
+                        {t('step4.html')}
+                    </button>
+                    <button
+                        onClick={() => downloadFile('doc')}
+                        className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
+                    >
+                        <FileText className="w-4 h-4" />
+                        {t('step4.word')}
+                    </button>
+                    <button
+                        onClick={downloadPDF}
+                        disabled={downloading}
+                        className="flex items-center gap-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm"
+                        title={t('step4.printTitle')}
+                    >
+                        {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                        {downloading ? t('step4.preparing') : t('step4.downloadPDF')}
+                    </button>
                 </div>
             </div>
         </div >

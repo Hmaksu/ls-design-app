@@ -132,4 +132,8 @@ export type LSContextType = {
   updateObjective: (id: string, text: string) => void;
   removeObjective: (id: string) => void;
   saveLS: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 };
