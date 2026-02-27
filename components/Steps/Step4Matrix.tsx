@@ -233,7 +233,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                         row += `<td class="center check" style="background-color: ${hasMode ? '#e6f3ff' : 'transparent'}">${cellContent}</td>`;
                     });
 
-                    row += `<td class="center">${item.duration} min</td>`;
+                    row += `<td class="center">${item.duration ? `${item.duration} min` : '-'}</td>`;
 
                     if (isFirstContentRow) {
                         row += `<td rowspan="${totalRows}" class="center">${mod.assessmentMethods?.join(', ') || ''}</td>`;
@@ -485,7 +485,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                                                 </td>
                                                             );
                                                         })}
-                                                        <td className="border border-black p-2 text-center whitespace-nowrap">{content.duration} min</td>
+                                                        <td className="border border-black p-2 text-center whitespace-nowrap">{content.duration ? `${content.duration} min` : '-'}</td>
                                                         {isFirstRowForAssessment && (
                                                             <td rowSpan={totalRows} className="border border-black p-3 text-center align-middle text-[10px] break-words bg-slate-50/30">
                                                                 {mod.assessmentMethods?.join(', ') || '-'}
@@ -517,7 +517,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                                                         </td>
                                                                     );
                                                                 })}
-                                                                <td className="border border-black p-1 text-center whitespace-nowrap text-slate-600">{sub.duration} min</td>
+                                                                <td className="border border-black p-1 text-center whitespace-nowrap text-slate-600">{sub.duration ? `${sub.duration} min` : '-'}</td>
                                                             </tr>
                                                             {sub.subContents?.map((subSub, ssIdx) => (
                                                                 <tr key={subSub.id}>
@@ -537,7 +537,7 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                                                             </td>
                                                                         );
                                                                     })}
-                                                                    <td className="border border-black p-1 text-center whitespace-nowrap text-slate-500">{subSub.duration} min</td>
+                                                                    <td className="border border-black p-1 text-center whitespace-nowrap text-slate-500">{subSub.duration ? `${subSub.duration} min` : '-'}</td>
                                                                 </tr>
                                                             ))}
                                                         </React.Fragment>

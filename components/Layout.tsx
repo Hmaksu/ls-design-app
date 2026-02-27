@@ -19,7 +19,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <div className="flex items-center space-x-4">
             <LanguageSwitcher variant="header" />
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              Pre-Alpha v2.4.1
+              Pre-Alpha v2.4.2
             </div>
           </div>
         </div>
