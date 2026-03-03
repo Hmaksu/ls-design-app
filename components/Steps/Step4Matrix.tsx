@@ -225,12 +225,24 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                         const hasMode = item.deliveryModes.includes(mode);
                         let cellContent = '';
                         if (hasMode) {
-                            const linkUrl = item.deliveryLinks[mode];
-                            cellContent = linkUrl
-                                ? `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer"><b>&#10003;</b></a>`
-                                : `<b>&#10003;</b>`;
+                            const modeData = item.deliveryLinks?.[mode];
+                            const linksUrls = Array.isArray(modeData) ? modeData : (typeof modeData === 'string' ? [modeData] : []);
+                            const validLinks = linksUrls.filter(u => u.trim() !== '');
+
+                            if (validLinks.length > 1) {
+                                // Multiple links: smaller checkmarks side-by-side
+                                cellContent = `<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 2px;">` +
+                                    validLinks.map(url => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="font-size: 10px; line-height: 1;"><b>&#10003;</b></a>`).join('')
+                                    + `</div>`;
+                            } else if (validLinks.length === 1) {
+                                // Single link
+                                cellContent = `<a href="${validLinks[0]}" target="_blank" rel="noopener noreferrer"><b>&#10003;</b></a>`;
+                            } else {
+                                // No link, just mode checked
+                                cellContent = `<b>&#10003;</b>`;
+                            }
                         }
-                        row += `<td class="center check" style="background-color: ${hasMode ? '#e6f3ff' : 'transparent'}">${cellContent}</td>`;
+                        row += `<td class="center check" style="background-color: ${hasMode ? '#e6f3ff' : 'transparent'}; vertical-align: middle;">${cellContent}</td>`;
                     });
 
                     row += `<td class="center">${item.duration ? `${item.duration} min` : '-'}</td>`;
@@ -445,12 +457,21 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                                         <td className="border border-black p-2 font-medium">{modIdx + 1}.{cIdx + 1} {content.title}</td>
                                                         {activeModes.map(mode => {
                                                             const hasMode = content.deliveryModes.includes(mode);
-                                                            const linkUrl = content.deliveryLinks?.[mode];
+                                                            const modeData = content.deliveryLinks?.[mode];
+                                                            const linksUrls = Array.isArray(modeData) ? modeData : (typeof modeData === 'string' ? [modeData] : []);
+                                                            const validLinks = linksUrls.filter(u => u.trim() !== '');
+
                                                             return (
                                                                 <td key={mode} className={`border border-black p-1 text-center align-middle ${hasMode ? 'bg-blue-50/60 font-bold' : ''}`}>
                                                                     {hasMode && (
-                                                                        linkUrl ? (
-                                                                            <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
+                                                                        validLinks.length > 1 ? (
+                                                                            <div className="flex flex-wrap justify-center gap-1">
+                                                                                {validLinks.map((url, i) => (
+                                                                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-[10px] leading-none">✓</a>
+                                                                                ))}
+                                                                            </div>
+                                                                        ) : validLinks.length === 1 ? (
+                                                                            <a href={validLinks[0]} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
                                                                         ) : (
                                                                             <span className="text-slate-800">✓</span>
                                                                         )
@@ -477,12 +498,20 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                                                 <td className="border border-black p-1.5 pl-6 text-slate-700 italic border-l-2 border-l-slate-300">{modIdx + 1}.{cIdx + 1}.{sIdx + 1} {sub.title}</td>
                                                                 {activeModes.map(mode => {
                                                                     const hasMode = sub.deliveryModes.includes(mode);
-                                                                    const linkUrl = sub.deliveryLinks?.[mode];
+                                                                    const modeData = sub.deliveryLinks?.[mode];
+                                                                    const linksUrls = Array.isArray(modeData) ? modeData : (typeof modeData === 'string' ? [modeData] : []);
+                                                                    const validLinks = linksUrls.filter(u => u.trim() !== '');
                                                                     return (
                                                                         <td key={mode} className={`border border-black p-1 text-center align-middle ${hasMode ? 'bg-blue-50/60 font-bold' : ''}`}>
                                                                             {hasMode && (
-                                                                                linkUrl ? (
-                                                                                    <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
+                                                                                validLinks.length > 1 ? (
+                                                                                    <div className="flex flex-wrap justify-center gap-1">
+                                                                                        {validLinks.map((url, i) => (
+                                                                                            <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-[10px] leading-none">✓</a>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                ) : validLinks.length === 1 ? (
+                                                                                    <a href={validLinks[0]} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
                                                                                 ) : (
                                                                                     <span className="text-slate-800">✓</span>
                                                                                 )
@@ -497,12 +526,20 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                                                                     <td className="border border-black p-1 pl-10 text-slate-500 italic border-l-4 border-l-slate-200">{modIdx + 1}.{cIdx + 1}.{sIdx + 1}.{ssIdx + 1} {subSub.title}</td>
                                                                     {activeModes.map(mode => {
                                                                         const hasMode = subSub.deliveryModes.includes(mode);
-                                                                        const linkUrl = subSub.deliveryLinks?.[mode];
+                                                                        const modeData = subSub.deliveryLinks?.[mode];
+                                                                        const linksUrls = Array.isArray(modeData) ? modeData : (typeof modeData === 'string' ? [modeData] : []);
+                                                                        const validLinks = linksUrls.filter(u => u.trim() !== '');
                                                                         return (
                                                                             <td key={mode} className={`border border-black p-1 text-center align-middle ${hasMode ? 'bg-blue-50/60 font-bold' : ''}`}>
                                                                                 {hasMode && (
-                                                                                    linkUrl ? (
-                                                                                        <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
+                                                                                    validLinks.length > 1 ? (
+                                                                                        <div className="flex flex-wrap justify-center gap-1">
+                                                                                            {validLinks.map((url, i) => (
+                                                                                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-[10px] leading-none">✓</a>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    ) : validLinks.length === 1 ? (
+                                                                                        <a href={validLinks[0]} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">✓</a>
                                                                                     ) : (
                                                                                         <span className="text-slate-800">✓</span>
                                                                                     )

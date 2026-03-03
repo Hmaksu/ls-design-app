@@ -95,8 +95,46 @@ const ContentFields: React.FC<{
     onUpdate({ deliveryModes: modes, deliveryLinks: newLinks, customDeliveryMode: customText });
   };
 
-  const updateLink = (mode: string, url: string) => {
-    onUpdate({ deliveryLinks: { ...content.deliveryLinks, [mode]: url } });
+  const updateLink = (mode: string, index: number, url: string) => {
+    const modeData = content.deliveryLinks[mode];
+    let modeLinks = [''];
+    if (Array.isArray(modeData)) {
+      modeLinks = modeData;
+    } else if (typeof modeData === 'string') {
+      modeLinks = [modeData];
+    }
+    const newModeLinks = [...modeLinks];
+    newModeLinks[index] = url;
+    onUpdate({ deliveryLinks: { ...content.deliveryLinks, [mode]: newModeLinks } });
+  };
+
+  const addLink = (mode: string) => {
+    const modeData = content.deliveryLinks[mode];
+    let modeLinks = [''];
+    if (Array.isArray(modeData)) {
+      modeLinks = modeData;
+    } else if (typeof modeData === 'string') {
+      modeLinks = [modeData];
+    }
+    onUpdate({ deliveryLinks: { ...content.deliveryLinks, [mode]: [...modeLinks, ''] } });
+  };
+
+  const removeLink = (mode: string, index: number) => {
+    const modeData = content.deliveryLinks[mode];
+    let modeLinks = [''];
+    if (Array.isArray(modeData)) {
+      modeLinks = modeData;
+    } else if (typeof modeData === 'string') {
+      modeLinks = [modeData];
+    }
+    if (modeLinks.length <= 1) {
+      // Clear it instead of removing the last input
+      updateLink(mode, 0, '');
+      return;
+    }
+    const newModeLinks = [...modeLinks];
+    newModeLinks.splice(index, 1);
+    onUpdate({ deliveryLinks: { ...content.deliveryLinks, [mode]: newModeLinks } });
   };
 
   return (
@@ -134,32 +172,57 @@ const ContentFields: React.FC<{
               <div className="grid grid-cols-1 gap-2">
                 {content.deliveryModes.map(mode => {
                   const isOther = mode === DeliveryModeType.OTHER;
-                  const linkUrl = content.deliveryLinks[mode];
+                  const modeData = content.deliveryLinks[mode];
+                  let linksUrls = [''];
+                  if (Array.isArray(modeData)) {
+                    linksUrls = modeData.length > 0 ? modeData : [''];
+                  } else if (typeof modeData === 'string' && modeData.trim() !== '') {
+                    linksUrls = [modeData];
+                  }
                   return (
-                    <div key={mode} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-slate-300 transition-colors">
-                      <div className="flex items-center space-x-3 min-w-[200px]">
+                    <div key={mode} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-slate-300 transition-colors">
+                      <div className="flex items-center space-x-3 min-w-[200px] mt-2">
                         <span className="text-itu-blue p-2 bg-blue-50/80 border border-blue-100 rounded-md shadow-sm">{DELIVERY_MODE_ICONS[mode]}</span>
                         <span className="text-sm font-bold text-slate-700 truncate">{t(`deliveryModes.${mode}` as any) || DELIVERY_MODE_LABELS[mode]}</span>
                       </div>
 
-                      <div className="flex-grow flex flex-col sm:flex-row gap-2 w-full">
+                      <div className="flex-grow flex flex-col gap-2 w-full">
                         {isOther && (
-                          <input type="text" value={content.customDeliveryMode || ''} onChange={(e) => onUpdate({ customDeliveryMode: e.target.value })} placeholder={t('step3.specifyMethod')} className="flex-[0.5] text-sm border border-slate-300 rounded-lg px-3 py-2 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all min-w-[120px]" />
+                          <input type="text" value={content.customDeliveryMode || ''} onChange={(e) => onUpdate({ customDeliveryMode: e.target.value })} placeholder={t('step3.specifyMethod')} className="text-sm border border-slate-300 rounded-lg px-3 py-2 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all w-full md:w-1/2" />
                         )}
-                        <div className="flex-1 flex items-center relative">
-                          <LinkIcon className="w-4 h-4 text-slate-400 absolute left-3" />
-                          <input type="text" value={linkUrl || ''} onChange={(e) => updateLink(mode, e.target.value)} placeholder="https:// example.com/resource" className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all" />
+
+                        <div className="flex flex-col gap-2">
+                          {linksUrls.map((linkUrl, index) => (
+                            <div key={index} className="flex flex-col sm:flex-row gap-2 w-full">
+                              <div className="flex-1 flex items-center relative">
+                                <LinkIcon className="w-4 h-4 text-slate-400 absolute left-3" />
+                                <input type="text" value={linkUrl || ''} onChange={(e) => updateLink(mode, index, e.target.value)} placeholder="https:// example.com/resource" className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all" />
+                              </div>
+                              <div className="flex items-center space-x-1 shrink-0">
+                                {linkUrl && (
+                                  <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-itu-blue hover:text-white hover:bg-itu-blue border border-itu-blue/20 rounded-lg transition-all shadow-sm flex items-center bg-white" title="Test Link">
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                )}
+                                {linksUrls.length > 1 && (
+                                  <button onClick={() => removeLink(mode, index)} className="p-2 text-slate-400 hover:text-white hover:bg-red-500 hover:border-red-500 border border-transparent rounded-lg transition-all bg-white" title="Remove Link">
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-start mt-1">
+                          <button onClick={() => addLink(mode)} className="text-xs font-semibold text-itu-cyan hover:text-itu-blue flex items-center transition-colors">
+                            <Plus className="w-3 h-3 mr-1" /> Add another link
+                          </button>
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-1 shrink-0 sm:ml-auto">
-                        {linkUrl && (
-                          <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-itu-blue hover:text-white hover:bg-itu-blue border border-itu-blue/20 rounded-lg transition-all shadow-sm flex items-center" title="Test Link">
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        )}
-                        <button onClick={() => toggleDeliveryMode(mode)} className="p-2 text-slate-400 hover:text-white hover:bg-red-500 hover:border-red-500 border border-transparent rounded-lg transition-all" title="Remove mode">
-                          <X className="w-4 h-4" />
+                      <div className="flex items-center shrink-0 sm:ml-auto mt-2">
+                        <button onClick={() => toggleDeliveryMode(mode)} className="p-2 text-slate-400 hover:text-white hover:bg-red-500 hover:border-red-500 border border-slate-200 bg-white rounded-lg transition-all shadow-sm" title="Remove mode">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>

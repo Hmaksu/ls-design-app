@@ -63,7 +63,7 @@ export interface LSContent {
   title: string;
   duration?: number; // minutes
   deliveryModes: DeliveryModeType[];
-  deliveryLinks: Record<string, string>; // Key: DeliveryModeType, Value: URL
+  deliveryLinks: Record<string, string[]>; // Key: DeliveryModeType, Value: URL array
   customDeliveryMode?: string; // For OTHER type
   subContents?: LSContent[];
 }
