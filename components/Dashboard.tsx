@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
     Plus, FolderOpen, Trash2, Clock, Layers, BookOpen, Globe,
-    Search, LogOut, User, Loader2, AlertCircle, Share2, Users, X, UserPlus, UserMinus, MessageSquare, Shield
+    Search, LogOut, User, Loader2, AlertCircle, Share2, Users, X, UserPlus, UserMinus, MessageSquare, Shield, GraduationCap, FileEdit, Bell
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
     getStations, getPublishedStations, deleteStation, StationSummary,
-    shareStation, getCollaborators, removeCollaborator, Collaborator
+    shareStation, getCollaborators, removeCollaborator, Collaborator,
+    getClasses, createClass, getClassDetails, addClassMember, removeClassMember
 } from '../services/authService';
+import { ClassEntity, ClassMember } from '../types';
 import { ContactForm } from './ContactForm';
 import { AdminPanel } from './AdminPanel';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { ClassOverview } from './ClassOverview';
 
 interface DashboardProps {
     user: { id: number; name: string; email: string; role?: string };
@@ -26,8 +29,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'mine' | 'community'>('mine');
+    const [activeTab, setActiveTab] = useState<'mine' | 'community' | 'classes'>('mine');
     const [publishedStations, setPublishedStations] = useState<StationSummary[]>([]);
+
+    // Classes state
+    const [classesData, setClassesData] = useState<{ owned: ClassEntity[]; joined: ClassEntity[] }>({ owned: [], joined: [] });
+    const [showCreateClass, setShowCreateClass] = useState(false);
+    const [newClassName, setNewClassName] = useState('');
+    const [newClassBaseId, setNewClassBaseId] = useState('');
+    const [creatingClass, setCreatingClass] = useState(false);
+
+    // Class Manager Modal state
+    const [manageClassId, setManageClassId] = useState<string | null>(null);
+    const [classDetails, setClassDetails] = useState<{ class: ClassEntity; members: ClassMember[]; role: 'instructor' | 'student'; studentStationId: string | null } | null>(null);
+    const [classLoading, setClassLoading] = useState(false);
+    const [newMemberEmail, setNewMemberEmail] = useState('');
+    const [addingMember, setAddingMember] = useState(false);
 
     // Share modal state
     const [shareModalStationId, setShareModalStationId] = useState<string | null>(null);
@@ -38,18 +55,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
     const [collabLoading, setCollabLoading] = useState(false);
     const [showContactForm, setShowContactForm] = useState(false);
     const [showAdminPanel, setShowAdminPanel] = useState(false);
+    const [overviewClassId, setOverviewClassId] = useState<string | null>(null);
+    const [overviewClassName, setOverviewClassName] = useState('');
 
-    useEffect(() => { loadStations(); }, []);
+    // Updates Modal
+    const [showUpdatesModal, setShowUpdatesModal] = useState(false);
+
+    useEffect(() => {
+        loadStations();
+        const hasSeenUpdates = localStorage.getItem('hasSeenUpdates_v1');
+        if (!hasSeenUpdates) {
+            setShowUpdatesModal(true);
+        }
+    }, []);
+
+    const handleCloseUpdates = () => {
+        localStorage.setItem('hasSeenUpdates_v1', 'true');
+        setShowUpdatesModal(false);
+    };
 
     const loadStations = async () => {
         try {
             setLoading(true);
-            const [myStations, communityStations] = await Promise.all([
+            const [myStations, communityStations, clsData] = await Promise.all([
                 getStations(),
-                getPublishedStations()
+                getPublishedStations(),
+                getClasses()
             ]);
             setStations(myStations);
             setPublishedStations(communityStations);
+            setClassesData(clsData);
         } catch (err: any) {
             setError(err.message || t('dashboard.failedToLoad'));
         } finally {
@@ -120,6 +155,76 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
         }
     };
 
+    // --- Classes Modal Handlers ---
+    const handleCreateClass = async () => {
+        if (!newClassName.trim() || !newClassBaseId) return;
+        setCreatingClass(true);
+        try {
+            await createClass(newClassName.trim(), newClassBaseId);
+            setShowCreateClass(false);
+            setNewClassName('');
+            setNewClassBaseId('');
+            loadStations(); // reload everything
+        } catch (err: any) {
+            alert(err.message || 'Failed to create class');
+        } finally {
+            setCreatingClass(false);
+        }
+    };
+
+    const openClassManager = async (classId: string) => {
+        setManageClassId(classId);
+        setClassLoading(true);
+        setClassDetails(null);
+        setNewMemberEmail('');
+        try {
+            const data = await getClassDetails(classId);
+            setClassDetails(data);
+        } catch (err: any) {
+            alert(err.message || 'Failed to load class details');
+            setManageClassId(null);
+        } finally {
+            setClassLoading(false);
+        }
+    };
+
+    const handleAddMember = async () => {
+        if (!newMemberEmail.trim() || !manageClassId) return;
+        setAddingMember(true);
+        try {
+            const res = await addClassMember(manageClassId, newMemberEmail.trim());
+            if (classDetails) {
+                setClassDetails({ ...classDetails, members: [...classDetails.members, res.member] });
+            }
+            setClassesData(prev => ({
+                ...prev,
+                owned: prev.owned.map(c => c.id === manageClassId ? { ...c, student_count: (c.student_count || 0) + 1 } : c)
+            }));
+            setNewMemberEmail('');
+        } catch (err: any) {
+            alert(err.message || 'Failed to add student');
+        } finally {
+            setAddingMember(false);
+        }
+    };
+
+    const handleRemoveMemberUser = async (userId: number) => {
+        if (!manageClassId) return;
+        if (!confirm('Are you sure you want to remove this student?')) return;
+        try {
+            await removeClassMember(manageClassId, userId);
+            if (classDetails) {
+                setClassDetails({ ...classDetails, members: classDetails.members.filter(m => m.id !== userId) });
+            }
+            setClassesData(prev => ({
+                ...prev,
+                owned: prev.owned.map(c => c.id === manageClassId ? { ...c, student_count: Math.max(0, (c.student_count || 1) - 1) } : c)
+            }));
+        } catch (err: any) {
+            alert(err.message || 'Failed to remove student');
+        }
+    };
+
     const currentList = activeTab === 'mine' ? stations : publishedStations;
     const filtered = currentList.filter(s =>
         (s.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -137,6 +242,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                     </div>
                     <div className="flex items-center space-x-3">
                         <LanguageSwitcher variant="dashboard" />
+                        <button
+                            onClick={() => setShowUpdatesModal(true)}
+                            className="flex items-center space-x-1 px-3 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="What's New"
+                        >
+                            <Bell className="w-4 h-4" />
+                            <span className="text-sm font-medium">Updates</span>
+                        </button>
                         <button
                             onClick={() => setShowContactForm(true)}
                             className="flex items-center space-x-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -188,6 +301,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <Users className="w-4 h-4" />
                             <span>{t('dashboard.community')}</span>
                         </button>
+                        <button
+                            onClick={() => setActiveTab('classes')}
+                            className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'classes' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <GraduationCap className="w-4 h-4" />
+                            <span>My Classes</span>
+                        </button>
                     </div>
 
                     {/* Actions Bar */}
@@ -196,7 +316,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder={t('dashboard.searchStations')}
+                                placeholder={activeTab === 'classes' ? 'Search classes...' : t('dashboard.searchStations')}
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -211,10 +331,78 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                 {t('dashboard.createNew')}
                             </button>
                         )}
+                        {activeTab === 'classes' && (
+                            <button
+                                onClick={() => setShowCreateClass(true)}
+                                className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Create Class
+                            </button>
+                        )}
                     </div>
 
                     {/* Content */}
-                    {loading ? (
+                    {activeTab === 'classes' ? (
+                        <div className="space-y-8">
+                            {/* Owned Classes */}
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
+                                    <Shield className="w-5 h-5 mr-2 text-blue-600" /> Classes I Teach
+                                </h2>
+                                {classesData.owned.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                                    <p className="text-sm text-slate-500">No classes found.</p>
+                                ) : (
+                                    <div className="grid gap-4">
+                                        {classesData.owned.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(cls => (
+                                            <div key={cls.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-slate-800">{cls.name}</h3>
+                                                    <p className="text-sm text-slate-500 mt-1">Base Station: {cls.base_ls_title}</p>
+                                                    <p className="text-xs text-slate-400 mt-1 flex items-center">
+                                                        <Users className="w-3 h-3 mr-1" /> {cls.student_count || 0} Students
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => openClassManager(cls.id)}
+                                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                                                >
+                                                    Manage Class
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Joined Classes */}
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
+                                    <Users className="w-5 h-5 mr-2 text-purple-600" /> Classes I've Joined
+                                </h2>
+                                {classesData.joined.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                                    <p className="text-sm text-slate-500">No joined classes found.</p>
+                                ) : (
+                                    <div className="grid gap-4">
+                                        {classesData.joined.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(cls => (
+                                            <div key={cls.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-slate-800">{cls.name}</h3>
+                                                    <p className="text-sm text-slate-500 mt-1">Instructor: {cls.instructor_name}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => cls.student_station_id ? onOpenStation(cls.student_station_id) : alert('Station not found')}
+                                                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <FileEdit className="w-4 h-4 mr-2" /> Open My Workspace
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : loading ? (
                         <div className="flex items-center justify-center py-20">
                             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                         </div>
@@ -318,17 +506,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
 
             <footer className="w-full text-slate-500 py-8 mt-auto border-t border-slate-200 bg-transparent">
                 <div className="container mx-auto px-4 flex flex-col items-center justify-center space-y-4">
-                    <a
-                        href="https://polen.itu.edu.tr/entities/publication/885d18fb-c6c0-4d0e-87d6-bd36b1781937"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
-                    >
-                        Learning Station Design Guide
-                    </a>
                     <div className="text-center text-sm">
                         <p>All translations were generated with AI. Please let us know if you notice any errors or inconsistencies.</p>
-                        <p>&copy; {new Date().getFullYear()} Learning Station Design Tool.</p>
+                        <p>&copy; {new Date().getFullYear()} <u><a href="https://polen.itu.edu.tr/entities/publication/885d18fb-c6c0-4d0e-87d6-bd36b1781937" target="_blank">Learning Station</a></u> Design Tool.</p>
                     </div>
                 </div>
             </footer>
@@ -420,6 +600,248 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             {/* ═══ Admin Panel Modal ═══ */}
             {showAdminPanel && (
                 <AdminPanel onClose={() => setShowAdminPanel(false)} />
+            )}
+            {/* ═══ Create Class Modal ═══ */}
+            {showCreateClass && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                        <h3 className="text-xl font-bold text-slate-800 mb-4">Create New Class</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Class Name</label>
+                                <input
+                                    type="text"
+                                    value={newClassName}
+                                    onChange={e => setNewClassName(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g. Fall 2026 CS101"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Base Learning Station</label>
+                                <select
+                                    value={newClassBaseId}
+                                    onChange={e => setNewClassBaseId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">-- Select a Station --</option>
+                                    {stations.map(s => (
+                                        <option key={s.id} value={s.id}>{s.title || s.code}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end space-x-3 mt-6">
+                            <button onClick={() => setShowCreateClass(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                            <button
+                                onClick={handleCreateClass}
+                                disabled={creatingClass || !newClassName || !newClassBaseId}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {creatingClass ? 'Creating...' : 'Create Class'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ Manage Class Modal ═══ */}
+            {manageClassId && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setManageClassId(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center">
+                                <GraduationCap className="w-5 h-5 mr-2 text-blue-600" />
+                                {classLoading ? 'Loading...' : classDetails?.class?.name}
+                            </h3>
+                            <div className="flex items-center space-x-2">
+                                {classDetails && classDetails.role === 'instructor' && classDetails.members.length > 0 && (
+                                    <button
+                                        onClick={() => { setOverviewClassId(manageClassId); setOverviewClassName(classDetails.class.name); setManageClassId(null); }}
+                                        className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
+                                    >
+                                        <Layers className="w-3.5 h-3.5 mr-1.5" /> Module Overview
+                                    </button>
+                                )}
+                                <button onClick={() => setManageClassId(null)} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+                                    <X className="w-5 h-5 text-slate-400" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+                            {classLoading ? (
+                                <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+                            ) : classDetails && (
+                                <div className="space-y-6">
+                                    {/* Add Student Form */}
+                                    <div className="bg-white p-4 rounded-xl border border-slate-200">
+                                        <h4 className="text-sm font-semibold text-slate-700 mb-3">Add Student</h4>
+                                        <div className="flex space-x-2">
+                                            <input
+                                                type="email"
+                                                placeholder="Student Email Address"
+                                                value={newMemberEmail}
+                                                onChange={e => setNewMemberEmail(e.target.value)}
+                                                onKeyDown={e => e.key === 'Enter' && handleAddMember()}
+                                                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <button
+                                                onClick={handleAddMember}
+                                                disabled={addingMember || !newMemberEmail.trim()}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                                            >
+                                                {addingMember ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />} Add
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Students List */}
+                                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                            <h4 className="text-sm font-semibold text-slate-700">Enrolled Students ({classDetails.members.length})</h4>
+                                        </div>
+                                        <div className="divide-y divide-slate-100">
+                                            {classDetails.members.length === 0 ? (
+                                                <p className="text-center py-6 text-sm text-slate-500">No students joined yet.</p>
+                                            ) : (
+                                                classDetails.members.map(member => (
+                                                    <div key={member.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
+                                                        <div>
+                                                            <p className="font-medium text-slate-800 text-sm">{member.name}</p>
+                                                            <p className="text-xs text-slate-500">{member.email}</p>
+                                                        </div>
+                                                        <div className="flex items-center space-x-3">
+                                                            {member.station_id && (
+                                                                <button
+                                                                    onClick={() => onOpenStation(member.station_id!)}
+                                                                    className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
+                                                                >
+                                                                    <FolderOpen className="w-3 h-3 mr-1" /> View Workspace
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => handleRemoveMemberUser(member.id)}
+                                                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                                title="Remove Student"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ Class Overview Full-Screen ═══ */}
+            {overviewClassId && (
+                <ClassOverview
+                    classId={overviewClassId}
+                    className={overviewClassName}
+                    onClose={() => setOverviewClassId(null)}
+                    onOpenStation={(stationId) => { setOverviewClassId(null); onOpenStation(stationId); }}
+                />
+            )}
+
+            {/* ═══ Updates Modal ═══ */}
+            {showUpdatesModal && (
+                <div
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+                    onClick={handleCloseUpdates}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center">
+                                    <span className="text-xl mr-2">🚀</span> Version 3.0 Released
+                                </h3>
+                                <button
+                                    onClick={handleCloseUpdates}
+                                    className="p-1 hover:bg-white rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-slate-400" />
+                                </button>
+                            </div>
+                            <p className="text-sm text-slate-600 mt-2">
+                                Here are a few important updates about the latest release:
+                            </p>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mt-0.5 mr-3 text-blue-600">
+                                    <GraduationCap className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-800">
+                                        Class Feature Added
+                                    </h4>
+                                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                                        A new class feature has been added. You can now manage class-related
+                                        workflows more easily within the platform.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center mt-0.5 mr-3 text-amber-600">
+                                    <Globe className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-800">
+                                        Language Improvements in Progress
+                                    </h4>
+                                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                                        There may still be some language-related issues in certain parts of
+                                        the platform. We are actively working on them, and English is
+                                        currently the most stable language.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center mt-0.5 mr-3 text-rose-600">
+                                    <Clock className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-800">
+                                        Need Help? Contact Us
+                                    </h4>
+                                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                                        If you notice any issues in files you are currently working on, such
+                                        as errors, white screens, or unexpected behavior, please contact us
+                                        via feedback button on top or email us at{" "}
+                                        <a
+                                            href="mailto:mehmet.aksu@learningstations.org"
+                                            className="text-blue-600 hover:underline"
+                                        >
+                                            mehmet.aksu@learningstations.org
+                                        </a>.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 pt-5 border-t border-slate-100 flex justify-end">
+                                <button
+                                    onClick={handleCloseUpdates}
+                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors w-full sm:w-auto shadow-sm"
+                                >
+                                    Got it, thanks!
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

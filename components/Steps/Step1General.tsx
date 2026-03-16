@@ -7,12 +7,15 @@ import { useTranslation } from 'react-i18next';
 export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) => {
     const { t } = useTranslation();
     const { currentLS, updateLS } = context;
+    const isLocked = !!currentLS.class_id;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        if (isLocked) return;
         updateLS({ [e.target.name]: e.target.value });
     };
 
     const toggleSDG = (sdg: string) => {
+        if (isLocked) return;
         const currentSDGs = currentLS.relatedSDGs ? currentLS.relatedSDGs.split(', ') : [];
         let newSDGs = [];
         if (currentSDGs.includes(sdg)) {
@@ -25,13 +28,19 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
         updateLS({ relatedSDGs: newSDGs.join(', ') });
     };
 
-    const inputClass = "w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-md focus:ring-1 focus:ring-itu-cyan outline-none transition-colors";
+    const inputClass = `w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-md focus:ring-1 focus:ring-itu-cyan outline-none transition-colors ${isLocked ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`;
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in space-y-8">
             <div className="border-b pb-4">
                 <h2 className="text-2xl font-bold text-itu-blue">{t('step1.title')}</h2>
                 <p className="text-slate-500 mt-1">{t('step1.subtitle')}</p>
+                {isLocked && (
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center text-amber-800 text-sm">
+                        <Info className="w-5 h-5 mr-2 text-amber-500 flex-shrink-0" />
+                        This is a Class Station. The Information Table is managed by your instructor and is locked for editing. You can only edit Modules (Step 3).
+                    </div>
+                )}
             </div>
 
             {/* 1. Identity Information */}
@@ -48,6 +57,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.title}
                             onChange={handleChange}
                             placeholder={t('step1.exTitle')}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -59,6 +69,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.code}
                             onChange={handleChange}
                             placeholder={t('step1.exCode')}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -69,6 +80,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             name="ects"
                             value={currentLS.ects}
                             onChange={handleChange}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -79,6 +91,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             name="initialDesignDate"
                             value={currentLS.initialDesignDate}
                             onChange={handleChange}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -89,6 +102,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             name="finalRevisionDate"
                             value={currentLS.finalRevisionDate}
                             onChange={handleChange}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -110,6 +124,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             name="subject"
                             value={currentLS.subject}
                             onChange={handleChange}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -119,6 +134,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             name="level"
                             value={currentLS.level}
                             onChange={handleChange}
+                            disabled={isLocked}
                             className={inputClass}
                         >
                             <option value="Basic">{t('step1.levelBasic')}</option>
@@ -134,6 +150,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.keywords}
                             onChange={handleChange}
                             placeholder={t('step1.keywordsPlace')}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -144,6 +161,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.targetAudience}
                             onChange={handleChange}
                             rows={2}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -154,6 +172,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.description}
                             onChange={handleChange}
                             rows={3}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -165,6 +184,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.globalLearningOutcomes}
                             onChange={handleChange}
                             rows={3}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -179,8 +199,9 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                                         onClick={() => toggleSDG(sdg)}
                                         className={`flex items-start text-left text-xs p-2 rounded border transition-all ${isSelected
                                             ? 'bg-itu-blue text-white border-itu-blue shadow-sm'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:border-itu-cyan hover:bg-slate-50'
+                                            : isLocked ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-600 border-slate-200 hover:border-itu-cyan hover:bg-slate-50'
                                             }`}
+                                        disabled={isLocked}
                                     >
                                         <div className={`mt-0.5 mr-2 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-white' : 'border-slate-300'}`}>
                                             {isSelected && <Check className="w-3 h-3" />}
@@ -209,6 +230,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.globalAssessmentMethods}
                             onChange={handleChange}
                             rows={2}
+                            disabled={isLocked}
                             placeholder={t('step1.assessmentPlace')}
                             className={inputClass}
                         />
@@ -220,6 +242,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             name="calendar"
                             value={currentLS.calendar}
                             onChange={handleChange}
+                            disabled={isLocked}
                             placeholder={t('step1.calPlace')}
                             className={inputClass}
                         />
@@ -232,6 +255,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                                 name="durationInPerson"
                                 value={currentLS.durationInPerson}
                                 onChange={handleChange}
+                                disabled={isLocked}
                                 placeholder={t('step1.hours')}
                                 className={inputClass}
                             />
@@ -243,6 +267,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                                 name="durationDigital"
                                 value={currentLS.durationDigital}
                                 onChange={handleChange}
+                                disabled={isLocked}
                                 placeholder={t('step1.hours')}
                                 className={inputClass}
                             />
@@ -255,6 +280,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             name="quota"
                             value={currentLS.quota}
                             onChange={handleChange}
+                            disabled={isLocked}
                             placeholder={t('step1.quotaPlace')}
                             className={inputClass}
                         />
@@ -265,6 +291,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             name="language"
                             value={currentLS.language}
                             onChange={handleChange as any}
+                            disabled={isLocked}
                             className={inputClass}
                         >
                             <option value="">{t('step1.selectLanguage') || 'Select...'}</option>
@@ -294,6 +321,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.prerequisites}
                             onChange={handleChange}
                             rows={2}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -304,6 +332,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.specialNeeds}
                             onChange={handleChange}
                             rows={2}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -314,6 +343,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.materialsAndResources}
                             onChange={handleChange}
                             rows={2}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>
@@ -324,6 +354,7 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             value={currentLS.notes}
                             onChange={handleChange}
                             rows={2}
+                            disabled={isLocked}
                             className={inputClass}
                         />
                     </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LSContextType, BloomLevel, DeliveryModeType, LSModule, LSContent, LearningObjective } from '../../types';
 import { DELIVERY_MODE_ICONS, DELIVERY_MODE_LABELS } from '../../constants';
-import { Trash2, Plus, ChevronDown, ChevronUp, ChevronRight, Link as LinkIcon, Box, FileText, CornerDownRight, PenLine, ArrowUp, ArrowDown, X, Search, Check, ExternalLink, ListTree, FoldVertical, UnfoldVertical } from 'lucide-react';
+import { Trash2, Plus, ChevronDown, ChevronUp, ChevronRight, Link as LinkIcon, Box, FileText, CornerDownRight, PenLine, ArrowUp, ArrowDown, X, Search, Check, ExternalLink, ListTree, FoldVertical, UnfoldVertical, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 // --- Sub-component: Delivery Mode Modal ---
@@ -71,7 +71,8 @@ const DeliveryModeModal: React.FC<{
 const ContentFields: React.FC<{
   content: LSContent;
   onUpdate: (data: Partial<LSContent>) => void;
-}> = ({ content, onUpdate }) => {
+  isClassStudent?: boolean;
+}> = ({ content, onUpdate, isClassStudent }) => {
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -148,7 +149,8 @@ const ContentFields: React.FC<{
             value={content.title}
             onChange={(e) => onUpdate({ title: e.target.value })}
             placeholder={t('step3.contentTitlePlace')}
-            className="w-full text-sm bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2.5 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all"
+            disabled={isClassStudent}
+            className={`w-full text-sm bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2.5 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
           />
         </div>
         <div className="md:col-span-4">
@@ -157,7 +159,8 @@ const ContentFields: React.FC<{
             type="number"
             value={content.duration ?? ''}
             onChange={(e) => onUpdate({ duration: e.target.value === '' ? undefined : (parseInt(e.target.value, 10) || 0) })}
-            className="w-full text-sm bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2.5 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all"
+            disabled={isClassStudent}
+            className={`w-full text-sm bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2.5 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
           />
         </div>
 
@@ -253,7 +256,8 @@ const SubSubContentCard: React.FC<{
   onMove: (ssIdx: number, direction: 'up' | 'down') => void;
   isFirst: boolean;
   isLast: boolean;
-}> = ({ subSub, index, sIdx, ssIdx, onUpdate, onRemove, onMove, isFirst, isLast }) => {
+  isClassStudent?: boolean;
+}> = ({ subSub, index, sIdx, ssIdx, onUpdate, onRemove, onMove, isFirst, isLast, isClassStudent }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   return (
@@ -273,18 +277,20 @@ const SubSubContentCard: React.FC<{
           )}
         </div>
         <div className="flex items-center space-x-1 shrink-0 ml-2">
-          {!isFirst && (
+          {!isClassStudent && !isFirst && (
             <button onClick={(e) => { e.stopPropagation(); onMove(ssIdx, 'up'); }} className="text-slate-400 hover:text-itu-blue p-1 rounded-full transition-colors"><ArrowUp className="w-3 h-3" /></button>
           )}
-          {!isLast && (
+          {!isClassStudent && !isLast && (
             <button onClick={(e) => { e.stopPropagation(); onMove(ssIdx, 'down'); }} className="text-slate-400 hover:text-itu-blue p-1 rounded-full transition-colors"><ArrowDown className="w-3 h-3" /></button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors"><Trash2 className="w-3 h-3" /></button>
+          {!isClassStudent && (
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors"><Trash2 className="w-3 h-3" /></button>
+          )}
         </div>
       </div>
       {isExpanded && (
         <div className="mt-3 pt-3 border-t border-slate-200 animate-fade-in">
-          <ContentFields content={subSub} onUpdate={onUpdate} />
+          <ContentFields content={subSub} onUpdate={onUpdate} isClassStudent={isClassStudent} />
         </div>
       )}
     </div>
@@ -301,7 +307,8 @@ const SubContentCard: React.FC<{
   onMove: (sIdx: number, direction: 'up' | 'down') => void;
   isFirst: boolean;
   isLast: boolean;
-}> = ({ sub, index, sIdx, onUpdate, onRemove, onMove, isFirst, isLast }) => {
+  isClassStudent?: boolean;
+}> = ({ sub, index, sIdx, onUpdate, onRemove, onMove, isFirst, isLast, isClassStudent }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const addSubSubContent = () => {
@@ -357,30 +364,34 @@ const SubContentCard: React.FC<{
           )}
         </div>
         <div className="flex items-center space-x-1 shrink-0 ml-2">
-          {!isFirst && (
+          {!isClassStudent && !isFirst && (
             <button onClick={(e) => { e.stopPropagation(); onMove(sIdx, 'up'); }} className="text-slate-400 hover:text-itu-blue p-1.5 hover:bg-slate-100 rounded-full transition-colors"><ArrowUp className="w-4 h-4" /></button>
           )}
-          {!isLast && (
+          {!isClassStudent && !isLast && (
             <button onClick={(e) => { e.stopPropagation(); onMove(sIdx, 'down'); }} className="text-slate-400 hover:text-itu-blue p-1.5 hover:bg-slate-100 rounded-full transition-colors"><ArrowDown className="w-4 h-4" /></button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-slate-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-full transition-colors"><Trash2 className="w-4 h-4" /></button>
+          {!isClassStudent && (
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-slate-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-full transition-colors"><Trash2 className="w-4 h-4" /></button>
+          )}
         </div>
       </div>
       {isExpanded && (
         <div className="mt-4 pt-4 border-t border-slate-100 animate-fade-in">
-          <ContentFields content={sub} onUpdate={onUpdate} />
+          <ContentFields content={sub} onUpdate={onUpdate} isClassStudent={isClassStudent} />
 
           <div className="mt-4 pl-4 ml-2 border-l-2 border-slate-100 relative pt-2">
             <div className="flex items-center justify-between mb-4 mt-2">
               <h5 className="text-xs font-bold text-slate-500 flex items-center bg-white px-2 py-1 rounded border border-slate-100 shadow-sm">
                 <ListTree className="w-3 h-3 mr-1" /> {t('step3.subContents') || 'Sub-Contents'}
               </h5>
-              <button
-                onClick={addSubSubContent}
-                className="flex items-center px-2 py-1 bg-white text-itu-cyan border border-itu-cyan/30 rounded hover:bg-blue-50 hover:border-itu-cyan transition-colors text-xs font-semibold shadow-sm"
-              >
-                <Plus className="w-3 h-3 mr-1" /> {t('step3.addSubContent')}
-              </button>
+              {!isClassStudent && (
+                <button
+                  onClick={addSubSubContent}
+                  className="flex items-center px-2 py-1 bg-white text-itu-cyan border border-itu-cyan/30 rounded hover:bg-blue-50 hover:border-itu-cyan transition-colors text-xs font-semibold shadow-sm"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> {t('step3.addSubContent')}
+                </button>
+              )}
             </div>
 
             {sub.subContents && sub.subContents.map((subSub, ssIdx) => (
@@ -395,6 +406,7 @@ const SubContentCard: React.FC<{
                 onMove={moveSubSubContent}
                 isFirst={ssIdx === 0}
                 isLast={ssIdx === sub.subContents!.length - 1}
+                isClassStudent={isClassStudent}
               />
             ))}
           </div>
@@ -413,7 +425,8 @@ const ContentCard: React.FC<{
   index: number;
   isFirst: boolean;
   isLast: boolean;
-}> = ({ content, onUpdate, onRemove, onMove, index, isFirst, isLast }) => {
+  isClassStudent?: boolean;
+}> = ({ content, onUpdate, onRemove, onMove, index, isFirst, isLast, isClassStudent }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -478,27 +491,31 @@ const ContentCard: React.FC<{
           )}
         </div>
         <div className="flex items-center space-x-1 shrink-0 ml-2">
-          {!isFirst && (
+          {!isClassStudent && !isFirst && (
             <button onClick={(e) => { e.stopPropagation(); onMove(index, 'up'); }} className="text-slate-400 hover:text-itu-blue p-2 hover:bg-white hover:shadow-sm border border-transparent rounded-full transition-all" title="Move Up"><ArrowUp className="w-4 h-4" /></button>
           )}
-          {!isLast && (
+          {!isClassStudent && !isLast && (
             <button onClick={(e) => { e.stopPropagation(); onMove(index, 'down'); }} className="text-slate-400 hover:text-itu-blue p-2 hover:bg-white hover:shadow-sm border border-transparent rounded-full transition-all" title="Move Down"><ArrowDown className="w-4 h-4" /></button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-slate-400 hover:text-red-500 p-2 hover:bg-white hover:shadow-sm border border-transparent hover:border-red-100 rounded-full transition-all" title="Delete Content"><Trash2 className="w-4 h-4" /></button>
+          {!isClassStudent && (
+            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-slate-400 hover:text-red-500 p-2 hover:bg-white hover:shadow-sm border border-transparent hover:border-red-100 rounded-full transition-all" title="Delete Content"><Trash2 className="w-4 h-4" /></button>
+          )}
         </div>
       </div>
 
       {isExpanded && (
         <div className="mt-5 pt-5 border-t border-slate-200 animate-fade-in">
-          <ContentFields content={content} onUpdate={onUpdate} />
+          <ContentFields content={content} onUpdate={onUpdate} isClassStudent={isClassStudent} />
 
           {/* Sub-Contents Area */}
           <div className="mt-8 pl-6 border-l-[3px] border-slate-200/80 lg:pl-8 ml-2">
             <div className="mb-4 flex items-center justify-between bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm">
               <span className="text-xs font-bold text-slate-600 tracking-wide flex items-center"><CornerDownRight className="w-4 h-4 mr-2" /> {t('step3.subContents').toUpperCase()}</span>
-              <button onClick={addSubContent} className="text-xs flex items-center px-4 py-2 bg-slate-50 border border-itu-cyan text-itu-cyan hover:bg-itu-cyan hover:text-white rounded-lg transition-all font-bold tracking-wide shadow-sm">
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> {t('step3.addSubContent')}
-              </button>
+              {!isClassStudent && (
+                <button onClick={addSubContent} className="text-xs flex items-center px-4 py-2 bg-slate-50 border border-itu-cyan text-itu-cyan hover:bg-itu-cyan hover:text-white rounded-lg transition-all font-bold tracking-wide shadow-sm">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> {t('step3.addSubContent')}
+                </button>
+              )}
             </div>
 
             {(content.subContents || []).map((sub, sIdx) => (
@@ -512,6 +529,7 @@ const ContentCard: React.FC<{
                 onMove={moveSubContent}
                 isFirst={sIdx === 0}
                 isLast={sIdx === (content.subContents?.length || 0) - 1}
+                isClassStudent={isClassStudent}
               />
             ))}
           </div>
@@ -534,7 +552,8 @@ const ModuleCard: React.FC<{
   globalObjectives: LearningObjective[];
   isExpanded: boolean;
   onToggleExpand: () => void;
-}> = ({ module, index, onUpdate, onRemove, onMove, isFirst, isLast, isEven, globalObjectives, isExpanded, onToggleExpand }) => {
+  isClassStudent?: boolean;
+}> = ({ module, index, onUpdate, onRemove, onMove, isFirst, isLast, isEven, globalObjectives, isExpanded, onToggleExpand, isClassStudent }) => {
   const { t } = useTranslation();
 
   // --- Content Handlers ---
@@ -604,7 +623,7 @@ const ModuleCard: React.FC<{
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {!isFirst && (
+          {!isClassStudent && !isFirst && (
             <button
               onClick={(e) => { e.stopPropagation(); onMove(index, 'up'); }}
               className="text-slate-400 hover:text-itu-blue p-2 hover:bg-slate-100 rounded-full transition-colors"
@@ -613,7 +632,7 @@ const ModuleCard: React.FC<{
               <ArrowUp className="w-4 h-4" />
             </button>
           )}
-          {!isLast && (
+          {!isClassStudent && !isLast && (
             <button
               onClick={(e) => { e.stopPropagation(); onMove(index, 'down'); }}
               className="text-slate-400 hover:text-itu-blue p-2 hover:bg-slate-100 rounded-full transition-colors"
@@ -622,14 +641,16 @@ const ModuleCard: React.FC<{
               <ArrowDown className="w-4 h-4" />
             </button>
           )}
-          <div className="w-px h-6 bg-slate-200 mx-1"></div>
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove(module.id); }}
-            className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors"
-            title="Delete Module"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {!isClassStudent && <div className="w-px h-6 bg-slate-200 mx-1"></div>}
+          {!isClassStudent && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemove(module.id); }}
+              className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors"
+              title="Delete Module"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
           {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400 ml-1" /> : <ChevronDown className="w-5 h-5 text-slate-400 ml-1" />}
         </div>
       </div>
@@ -644,7 +665,8 @@ const ModuleCard: React.FC<{
                 type="text"
                 value={module.title}
                 onChange={(e) => onUpdate(module.id, { title: e.target.value })}
-                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none"
+                disabled={isClassStudent}
+                className={`w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
               />
             </div>
 
@@ -653,7 +675,8 @@ const ModuleCard: React.FC<{
               <select
                 value={module.bloomLevel}
                 onChange={(e) => onUpdate(module.id, { bloomLevel: e.target.value as BloomLevel })}
-                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm"
+                disabled={isClassStudent}
+                className={`w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
               >
                 {Object.values(BloomLevel).map(level => (
                   <option key={level} value={level}>{t(`bloomLevels.${level}` as any) || level}</option>
@@ -668,7 +691,8 @@ const ModuleCard: React.FC<{
               <textarea
                 value={module.learningOutcome || ''}
                 onChange={(e) => onUpdate(module.id, { learningOutcome: e.target.value })}
-                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none"
+                disabled={isClassStudent}
+                className={`w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
                 rows={2}
                 placeholder={t('step3.outcomePlace')}
               />
@@ -684,6 +708,7 @@ const ModuleCard: React.FC<{
                       type="checkbox"
                       checked={(module.associatedObjectiveIds || []).includes(obj.id)}
                       onChange={() => toggleObjective(obj.id)}
+                      disabled={isClassStudent}
                       className="mt-1 rounded text-itu-blue focus:ring-itu-cyan"
                     />
                     <span className="text-sm text-slate-700">{obj.text || `Objective ${i + 1}`}</span>
@@ -698,7 +723,8 @@ const ModuleCard: React.FC<{
                 type="text"
                 value={module.assessmentMethods.join(', ')}
                 onChange={(e) => onUpdate(module.id, { assessmentMethods: e.target.value.split(', ') })}
-                className="w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none"
+                disabled={isClassStudent}
+                className={`w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
                 placeholder={t('step3.assessmentPlace')}
               />
             </div>
@@ -707,12 +733,14 @@ const ModuleCard: React.FC<{
           {/* CONTENTS SECTION */}
           <div className="mb-2 flex items-center justify-between">
             <h4 className="text-sm font-bold text-itu-blue tracking-wide">{t('step3.moduleContent')}</h4>
-            <button
-              onClick={addContent}
-              className="flex items-center text-xs bg-itu-blue text-white px-3 py-1.5 rounded hover:bg-blue-800 transition-colors"
-            >
-              <Plus className="w-3 h-3 mr-1" /> {t('step3.addContent')}
-            </button>
+            {!isClassStudent && (
+              <button
+                onClick={addContent}
+                className="flex items-center text-xs bg-itu-blue text-white px-3 py-1.5 rounded hover:bg-blue-800 transition-colors"
+              >
+                <Plus className="w-3 h-3 mr-1" /> {t('step3.addContent')}
+              </button>
+            )}
           </div>
 
           <div className="space-y-3 bg-slate-100/50 p-4 rounded-lg border border-slate-200/60 min-h-[100px]">
@@ -731,6 +759,7 @@ const ModuleCard: React.FC<{
                 onMove={moveContent}
                 isFirst={idx === 0}
                 isLast={idx === module.contents.length - 1}
+                isClassStudent={isClassStudent}
               />
             ))}
           </div>
@@ -745,6 +774,7 @@ export const Step3Modules: React.FC<{ context: LSContextType }> = ({ context }) 
   const { t } = useTranslation();
   const { currentLS, addModule, updateModule, removeModule, moveModule } = context;
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
+  const isClassStudent = !!currentLS.class_id;
 
   // Initialize all to collapsed (false) if empty
   React.useEffect(() => {
@@ -774,6 +804,12 @@ export const Step3Modules: React.FC<{ context: LSContextType }> = ({ context }) 
         <div>
           <h2 className="text-2xl font-bold text-itu-blue">{t('step3.title')}</h2>
           <p className="text-slate-500 mt-1">{t('step3.subtitle')}</p>
+          {isClassStudent && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center text-amber-800 text-sm">
+              <Info className="w-5 h-5 mr-2 text-amber-500 flex-shrink-0" />
+              This is a Class Station. Module structure is locked. You can only modify delivery modes and links.
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           {currentLS.modules.length > 0 && (
@@ -786,14 +822,16 @@ export const Step3Modules: React.FC<{ context: LSContextType }> = ({ context }) 
               <span className="hidden sm:inline">{allExpanded ? t('step3.collapseAll', 'Collapse All') : t('step3.expandAll', 'Expand All')}</span>
             </button>
           )}
-          <button
-            onClick={addModule}
-            className="flex items-center px-4 py-2 bg-itu-blue text-white rounded-lg hover:bg-blue-800 transition-colors font-medium shadow-md"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            <span className="hidden sm:inline">{t('step3.addModule')}</span>
-            <span className="sm:hidden">{t('step3.add')}</span>
-          </button>
+          {!isClassStudent && (
+            <button
+              onClick={addModule}
+              className="flex items-center px-4 py-2 bg-itu-blue text-white rounded-lg hover:bg-blue-800 transition-colors font-medium shadow-md"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              <span className="hidden sm:inline">{t('step3.addModule')}</span>
+              <span className="sm:hidden">{t('step3.add')}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -820,11 +858,12 @@ export const Step3Modules: React.FC<{ context: LSContextType }> = ({ context }) 
             globalObjectives={currentLS.objectives}
             isExpanded={expandedModules[module.id] === true}
             onToggleExpand={() => toggleModule(module.id)}
+            isClassStudent={isClassStudent}
           />
         ))}
       </div>
 
-      {currentLS.modules.length > 0 && (
+      {!isClassStudent && currentLS.modules.length > 0 && (
         <button
           onClick={addModule}
           className="mt-8 flex items-center justify-center w-full py-4 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-itu-cyan hover:text-itu-cyan transition-all font-medium"

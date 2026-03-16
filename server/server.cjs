@@ -15,6 +15,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 const { getDb } = require('./db.cjs');
 const { generateToken, authMiddleware } = require('./auth.cjs');
 
@@ -237,6 +238,12 @@ function getStationAccess(db, stationId, userId) {
     const collab = db.prepare('SELECT * FROM station_collaborators WHERE station_id = ? AND user_id = ?').get(stationId, userId);
     if (collab) return { station, role: 'collaborator' };
 
+    // Class instructor can view student workspaces
+    if (station.class_id) {
+        const cls = db.prepare('SELECT owner_id FROM classes WHERE id = ?').get(station.class_id);
+        if (cls && cls.owner_id === userId) return { station, role: 'viewer' };
+    }
+
     if (station.is_published === 1) return { station, role: 'viewer' };
 
     return { station: null, role: null };
@@ -253,7 +260,7 @@ app.get('/api/ls', authMiddleware, (req, res) => {
 
         // Own stations
         const owned = db.prepare(
-            'SELECT id, title, code, created_at, updated_at FROM learning_stations WHERE user_id = ? ORDER BY updated_at DESC'
+            'SELECT id, title, code, class_id, created_at, updated_at FROM learning_stations WHERE user_id = ? ORDER BY updated_at DESC'
         ).all(req.user.id);
 
         const enrichOwned = owned.map(s => {
@@ -266,9 +273,9 @@ app.get('/api/ls', authMiddleware, (req, res) => {
             }
         });
 
-        // Shared stations
+        // Shared stations (Collaboration)
         const shared = db.prepare(`
-            SELECT ls.id, ls.title, ls.code, ls.created_at, ls.updated_at, u.name as owner_name
+            SELECT ls.id, ls.title, ls.code, ls.class_id, ls.created_at, ls.updated_at, u.name as owner_name
             FROM station_collaborators sc
             JOIN learning_stations ls ON sc.station_id = ls.id
             JOIN users u ON ls.user_id = u.id
@@ -332,9 +339,10 @@ app.post('/api/ls', authMiddleware, (req, res) => {
 
         const db = getDb();
         const isPublished = station.isPublished ? 1 : 0;
+        const classId = station.class_id || null;
         db.prepare(
-            'INSERT INTO learning_stations (id, user_id, title, code, data, is_published) VALUES (?, ?, ?, ?, ?, ?)'
-        ).run(station.id, req.user.id, station.title || '', station.code || '', JSON.stringify(station), isPublished);
+            'INSERT INTO learning_stations (id, user_id, title, code, data, is_published, class_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).run(station.id, req.user.id, station.title || '', station.code || '', JSON.stringify(station), isPublished, classId);
 
         res.status(201).json({ success: true, id: station.id });
     } catch (err) {
@@ -500,6 +508,239 @@ app.delete('/api/ls/:id/share/:userId', authMiddleware, (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error('Unshare error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ═══════════════════════════════════════════
+// CLASSES ROUTES
+// ═══════════════════════════════════════════
+
+// POST /api/classes — Create a new class
+app.post('/api/classes', authMiddleware, (req, res) => {
+    try {
+        const { name, base_ls_id } = req.body;
+        if (!name || !base_ls_id) {
+            return res.status(400).json({ error: 'Name and base_ls_id are required' });
+        }
+
+        const db = getDb();
+        // Check if base_ls_id is owned by the user (or they are an admin/collaborator)
+        const baseStation = db.prepare('SELECT id FROM learning_stations WHERE id = ? AND user_id = ?').get(base_ls_id, req.user.id);
+        if (!baseStation) {
+            return res.status(403).json({ error: 'Not authorized to use this base station or it does not exist' });
+        }
+
+        const classId = crypto.randomUUID();
+        db.prepare(
+            'INSERT INTO classes (id, name, owner_id, base_ls_id) VALUES (?, ?, ?, ?)'
+        ).run(classId, name, req.user.id, base_ls_id);
+
+        res.status(201).json({ success: true, id: classId });
+    } catch (err) {
+        console.error('Create class error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /api/classes/me — Get classes owned by user and classes they are a member of
+app.get('/api/classes/me', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+
+        const owned = db.prepare(`
+            SELECT c.*, ls.title as base_ls_title, (SELECT COUNT(*) FROM class_members WHERE class_id = c.id) as student_count
+            FROM classes c
+            JOIN learning_stations ls ON c.base_ls_id = ls.id
+            WHERE c.owner_id = ?
+            ORDER BY c.created_at DESC
+        `).all(req.user.id);
+
+        const joined = db.prepare(`
+            SELECT c.*, ls.title as base_ls_title, u.name as instructor_name, cm.joined_at,
+                   (SELECT id FROM learning_stations WHERE class_id = c.id AND user_id = ?) as student_station_id
+            FROM class_members cm
+            JOIN classes c ON cm.class_id = c.id
+            JOIN learning_stations ls ON c.base_ls_id = ls.id
+            JOIN users u ON c.owner_id = u.id
+            WHERE cm.user_id = ?
+            ORDER BY cm.joined_at DESC
+        `).all(req.user.id, req.user.id);
+
+        res.json({ owned, joined });
+    } catch (err) {
+        console.error('Get classes error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /api/classes/:id — Get details of a single class
+app.get('/api/classes/:id', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const classObj = db.prepare(`
+            SELECT c.*, ls.title as base_ls_title, u.name as instructor_name
+            FROM classes c
+            JOIN learning_stations ls ON c.base_ls_id = ls.id
+            JOIN users u ON c.owner_id = u.id
+            WHERE c.id = ?
+        `).get(req.params.id);
+
+        if (!classObj) return res.status(404).json({ error: 'Class not found' });
+
+        const isOwner = classObj.owner_id === req.user.id;
+        const isMember = db.prepare('SELECT user_id FROM class_members WHERE class_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+
+        if (!isOwner && !isMember) {
+            return res.status(403).json({ error: 'Not authorized to view this class' });
+        }
+
+        // Fetch students and their derived stations
+        const members = db.prepare(`
+            SELECT u.id, u.name, u.email, cm.joined_at, ls.id as station_id, ls.updated_at as station_updated_at
+            FROM class_members cm
+            JOIN users u ON cm.user_id = u.id
+            LEFT JOIN learning_stations ls ON ls.class_id = cm.class_id AND ls.user_id = u.id
+            WHERE cm.class_id = ?
+            ORDER BY u.name ASC
+        `).all(req.params.id);
+
+        let myStationId = null;
+        if (isMember) {
+            const myStation = db.prepare('SELECT id FROM learning_stations WHERE class_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+            if (myStation) myStationId = myStation.id;
+        }
+
+        res.json({
+            class: classObj,
+            members,
+            role: isOwner ? 'instructor' : 'student',
+            studentStationId: myStationId
+        });
+    } catch (err) {
+        console.error('Get class details error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /api/classes/:id/overview — Get all students' module data for comparison (instructor only)
+app.get('/api/classes/:id/overview', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const classObj = db.prepare('SELECT * FROM classes WHERE id = ?').get(req.params.id);
+        if (!classObj) return res.status(404).json({ error: 'Class not found' });
+        if (classObj.owner_id !== req.user.id) return res.status(403).json({ error: 'Only the instructor can view this' });
+
+        const studentStations = db.prepare(`
+            SELECT ls.id as station_id, ls.data, ls.updated_at, u.id as student_id, u.name as student_name, u.email as student_email
+            FROM class_members cm
+            JOIN users u ON cm.user_id = u.id
+            LEFT JOIN learning_stations ls ON ls.class_id = cm.class_id AND ls.user_id = u.id
+            WHERE cm.class_id = ?
+            ORDER BY u.name ASC
+        `).all(req.params.id);
+
+        const students = studentStations.map(s => {
+            let modules = [];
+            try {
+                if (s.data) {
+                    const parsed = JSON.parse(s.data);
+                    modules = parsed.modules || [];
+                }
+            } catch { }
+            return {
+                student_id: s.student_id,
+                student_name: s.student_name,
+                student_email: s.student_email,
+                station_id: s.station_id,
+                updated_at: s.updated_at,
+                modules
+            };
+        });
+
+        res.json({ class_name: classObj.name, students });
+    } catch (err) {
+        console.error('Class overview error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/classes/:id/members — Add student to class
+app.post('/api/classes/:id/members', authMiddleware, (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email is required' });
+
+        const db = getDb();
+        const classObj = db.prepare('SELECT id, owner_id, base_ls_id FROM classes WHERE id = ?').get(req.params.id);
+        if (!classObj) return res.status(404).json({ error: 'Class not found' });
+
+        if (classObj.owner_id !== req.user.id) {
+            return res.status(403).json({ error: 'Only the instructor can add students' });
+        }
+
+        const studentUser = db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(email);
+        if (!studentUser) return res.status(404).json({ error: 'No user found with that email' });
+
+        if (studentUser.id === classObj.owner_id) {
+            return res.status(400).json({ error: 'Instructor cannot be added as a student' });
+        }
+
+        const existingMember = db.prepare('SELECT * FROM class_members WHERE class_id = ? AND user_id = ?').get(req.params.id, studentUser.id);
+        if (existingMember) return res.status(409).json({ error: 'User is already a student in this class' });
+
+        // Generate student LS clone immediately
+        const baseLS = db.prepare('SELECT data FROM learning_stations WHERE id = ?').get(classObj.base_ls_id);
+        if (!baseLS) return res.status(404).json({ error: 'Base LS not found, cannot clone' });
+
+        const baseLSData = JSON.parse(baseLS.data);
+        const newStationId = crypto.randomUUID();
+
+        // Overwrite ID to make it unique, keep everything else identical
+        baseLSData.id = newStationId;
+        baseLSData.class_id = classObj.id;
+
+        // Start TX to insert both relationship and cloned station
+        const addMemberTx = db.transaction(() => {
+            db.prepare('INSERT INTO class_members (class_id, user_id) VALUES (?, ?)').run(req.params.id, studentUser.id);
+            db.prepare(
+                'INSERT INTO learning_stations (id, user_id, title, code, data, is_published, class_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            ).run(newStationId, studentUser.id, baseLSData.title || '', baseLSData.code || '', JSON.stringify(baseLSData), 0, req.params.id);
+        });
+
+        addMemberTx();
+
+        res.json({ success: true, member: { id: studentUser.id, name: studentUser.name, email: studentUser.email, station_id: newStationId } });
+    } catch (err) {
+        console.error('Add class member error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// DELETE /api/classes/:id/members/:userId — Remove student from class
+app.delete('/api/classes/:id/members/:userId', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const classObj = db.prepare('SELECT owner_id FROM classes WHERE id = ?').get(req.params.id);
+        if (!classObj) return res.status(404).json({ error: 'Class not found' });
+
+        if (classObj.owner_id !== req.user.id) {
+            return res.status(403).json({ error: 'Only the instructor can remove students' });
+        }
+
+        const studentId = parseInt(req.params.userId);
+
+        const removeTx = db.transaction(() => {
+            db.prepare('DELETE FROM class_members WHERE class_id = ? AND user_id = ?').run(req.params.id, studentId);
+            // Optionally remove their private clone station as well
+            db.prepare('DELETE FROM learning_stations WHERE class_id = ? AND user_id = ?').run(req.params.id, studentId);
+        });
+
+        removeTx();
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Remove class member error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -76,6 +76,7 @@ export interface StationSummary {
     id: string;
     title: string;
     code: string;
+    class_id?: string;
     moduleCount: number;
     level: string;
     created_at: string;
@@ -144,6 +145,42 @@ export async function removeCollaborator(stationId: string, userId: number): Pro
     await apiFetch(`/ls/${stationId}/share/${userId}`, {
         method: 'DELETE',
     });
+}
+
+// ════ Classes ════
+
+import { ClassEntity, ClassMember } from '../types';
+
+export async function createClass(name: string, base_ls_id: string): Promise<{ success: boolean; id: string }> {
+    return apiFetch('/classes', {
+        method: 'POST',
+        body: JSON.stringify({ name, base_ls_id })
+    });
+}
+
+export async function getClasses(): Promise<{ owned: ClassEntity[]; joined: ClassEntity[] }> {
+    return apiFetch('/classes/me');
+}
+
+export async function getClassDetails(id: string): Promise<{ class: ClassEntity; members: ClassMember[]; role: 'instructor' | 'student'; studentStationId: string | null }> {
+    return apiFetch(`/classes/${id}`);
+}
+
+export async function addClassMember(classId: string, email: string): Promise<{ success: boolean; member: ClassMember }> {
+    return apiFetch(`/classes/${classId}/members`, {
+        method: 'POST',
+        body: JSON.stringify({ email })
+    });
+}
+
+export async function removeClassMember(classId: string, userId: number): Promise<{ success: boolean }> {
+    return apiFetch(`/classes/${classId}/members/${userId}`, {
+        method: 'DELETE'
+    });
+}
+
+export async function getClassOverview(classId: string): Promise<{ class_name: string; students: any[] }> {
+    return apiFetch(`/classes/${classId}/overview`);
 }
 
 // ═══ Forgot Password ═══

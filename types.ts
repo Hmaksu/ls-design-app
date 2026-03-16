@@ -81,6 +81,7 @@ export interface LSModule {
 
 export interface LearningStation {
   id: string;
+  class_id?: string;
   // --- Identity ---
   code: string;
   isPublished?: boolean;
@@ -137,3 +138,25 @@ export type LSContextType = {
   canUndo: boolean;
   canRedo: boolean;
 };
+
+export interface ClassMember {
+  id: number;
+  name: string;
+  email: string;
+  joined_at: string;
+  station_id?: string | null;
+  station_updated_at?: string | null;
+}
+
+export interface ClassEntity {
+  id: string;
+  name: string;
+  owner_id: number;
+  base_ls_id: string;
+  base_ls_title: string;
+  created_at: string;
+  student_count?: number;
+  instructor_name?: string;
+  joined_at?: string;
+  student_station_id?: string | null;
+}

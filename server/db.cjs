@@ -62,6 +62,25 @@ function initTables() {
       message TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS classes (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      owner_id INTEGER NOT NULL,
+      base_ls_id TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (base_ls_id) REFERENCES learning_stations(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS class_members (
+      class_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      joined_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (class_id, user_id),
+      FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
 
   // Migration: add columns to existing databases
@@ -69,7 +88,8 @@ function initTables() {
     "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'",
     "ALTER TABLE users ADD COLUMN security_question TEXT DEFAULT ''",
     "ALTER TABLE users ADD COLUMN security_answer TEXT DEFAULT ''",
-    "ALTER TABLE learning_stations ADD COLUMN is_published INTEGER DEFAULT 0"
+    "ALTER TABLE learning_stations ADD COLUMN is_published INTEGER DEFAULT 0",
+    "ALTER TABLE learning_stations ADD COLUMN class_id TEXT DEFAULT NULL"
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch (e) { /* column already exists */ }
