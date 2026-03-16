@@ -61,6 +61,62 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
     // Updates Modal
     const [showUpdatesModal, setShowUpdatesModal] = useState(false);
 
+    // Helper: convert string to URL-friendly slug
+    const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
+    useEffect(() => {
+        const handlePopState = (e: PopStateEvent) => {
+            const state = e.state;
+            if (!state) {
+                if (window.location.pathname === '/dashboard') {
+                    setManageClassId(null);
+                    setOverviewClassId(null);
+                }
+                return;
+            }
+            if (state.view === 'dashboard') {
+                if (state.subView === 'manageClass' && state.classId) {
+                    setOverviewClassId(null);
+                    openClassManager(state.classId, true);
+                } else if (state.subView === 'overviewClass' && state.classId) {
+                    setManageClassId(null);
+                    openClassOverview(state.classId, state.className || '', true);
+                } else {
+                    setManageClassId(null);
+                    setOverviewClassId(null);
+                }
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
+    // Handle initial deep links after data loads
+    useEffect(() => {
+        if (!classesData.owned.length) return;
+
+        const path = window.location.pathname;
+        if (path.startsWith('/dashboard/class/')) {
+            const parts = path.split('/');
+
+            if (parts[2] === 'class') {
+                const slug = decodeURIComponent(parts[3] || '');
+                const isOverview = parts[4] === 'overview';
+
+                const foundClass = classesData.owned.find(c => slugify(c.name) === slug);
+                if (foundClass) {
+                    if (isOverview) {
+                        window.history.replaceState({ view: 'dashboard', subView: 'overviewClass', classId: foundClass.id, className: foundClass.name }, '', path);
+                        openClassOverview(foundClass.id, foundClass.name, true);
+                    } else {
+                        window.history.replaceState({ view: 'dashboard', subView: 'manageClass', classId: foundClass.id }, '', path);
+                        openClassManager(foundClass.id, true);
+                    }
+                }
+            }
+        }
+    }, [classesData]);
+
     useEffect(() => {
         loadStations();
         const hasSeenUpdates = localStorage.getItem('hasSeenUpdates_v1');
@@ -166,14 +222,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             setNewClassBaseId('');
             loadStations(); // reload everything
         } catch (err: any) {
-            alert(err.message || 'Failed to create class');
+            alert(err.message || t('dashboard.failedToCreateClass'));
         } finally {
             setCreatingClass(false);
         }
     };
 
-    const openClassManager = async (classId: string) => {
+    const openClassManager = async (classId: string, fromHistory = false) => {
         setManageClassId(classId);
+
+        const cls = classesData.owned.find(c => c.id === classId);
+        if (cls && !fromHistory) {
+            window.history.pushState(
+                { view: 'dashboard', subView: 'manageClass', classId },
+                '',
+                `/dashboard/class/${encodeURIComponent(slugify(cls.name))}`
+            );
+        }
+
         setClassLoading(true);
         setClassDetails(null);
         setNewMemberEmail('');
@@ -181,11 +247,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             const data = await getClassDetails(classId);
             setClassDetails(data);
         } catch (err: any) {
-            alert(err.message || 'Failed to load class details');
+            alert(err.message || t('dashboard.failedToLoadClass'));
             setManageClassId(null);
         } finally {
             setClassLoading(false);
         }
+    };
+
+    const closeClassManager = () => {
+        setManageClassId(null);
+        window.history.pushState({ view: 'dashboard', step: 1 }, '', '/dashboard');
+    };
+
+    const openClassOverview = (classId: string, name: string, fromHistory = false) => {
+        setManageClassId(null);
+        setOverviewClassId(classId);
+        setOverviewClassName(name);
+        if (!fromHistory) {
+            window.history.pushState(
+                { view: 'dashboard', subView: 'overviewClass', classId, className: name },
+                '',
+                `/dashboard/class/${encodeURIComponent(slugify(name))}/overview`
+            );
+        }
+    };
+
+    const closeClassOverview = () => {
+        setOverviewClassId(null);
+        window.history.pushState({ view: 'dashboard', step: 1 }, '', '/dashboard');
     };
 
     const handleAddMember = async () => {
@@ -202,7 +291,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             }));
             setNewMemberEmail('');
         } catch (err: any) {
-            alert(err.message || 'Failed to add student');
+            alert(err.message || t('dashboard.failedToAddStudent'));
         } finally {
             setAddingMember(false);
         }
@@ -210,7 +299,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
 
     const handleRemoveMemberUser = async (userId: number) => {
         if (!manageClassId) return;
-        if (!confirm('Are you sure you want to remove this student?')) return;
+        if (!confirm(t('dashboard.confirmRemoveStudent'))) return;
         try {
             await removeClassMember(manageClassId, userId);
             if (classDetails) {
@@ -221,7 +310,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                 owned: prev.owned.map(c => c.id === manageClassId ? { ...c, student_count: Math.max(0, (c.student_count || 1) - 1) } : c)
             }));
         } catch (err: any) {
-            alert(err.message || 'Failed to remove student');
+            alert(err.message || t('dashboard.failedToRemoveStudent'));
         }
     };
 
@@ -306,7 +395,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'classes' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             <GraduationCap className="w-4 h-4" />
-                            <span>My Classes</span>
+                            <span>{t('dashboard.myClasses')}</span>
                         </button>
                     </div>
 
@@ -316,7 +405,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder={activeTab === 'classes' ? 'Search classes...' : t('dashboard.searchStations')}
+                                placeholder={activeTab === 'classes' ? t('dashboard.searchClasses') : t('dashboard.searchStations')}
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -337,7 +426,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                 className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
                             >
                                 <Plus className="w-4 h-4 mr-2" />
-                                Create Class
+                                {t('dashboard.createClass')}
                             </button>
                         )}
                     </div>
@@ -348,27 +437,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             {/* Owned Classes */}
                             <div>
                                 <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                                    <Shield className="w-5 h-5 mr-2 text-blue-600" /> Classes I Teach
+                                    <Shield className="w-5 h-5 mr-2 text-blue-600" /> {t('dashboard.classesITeach')}
                                 </h2>
                                 {classesData.owned.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
-                                    <p className="text-sm text-slate-500">No classes found.</p>
+                                    <p className="text-sm text-slate-500">{t('dashboard.noClassesFound')}</p>
                                 ) : (
                                     <div className="grid gap-4">
                                         {classesData.owned.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(cls => (
                                             <div key={cls.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow flex items-center justify-between">
                                                 <div>
                                                     <h3 className="text-lg font-semibold text-slate-800">{cls.name}</h3>
-                                                    <p className="text-sm text-slate-500 mt-1">Base Station: {cls.base_ls_title}</p>
+                                                    <p className="text-sm text-slate-500 mt-1">{t('dashboard.baseStation')}{cls.base_ls_title}</p>
                                                     <p className="text-xs text-slate-400 mt-1 flex items-center">
-                                                        <Users className="w-3 h-3 mr-1" /> {cls.student_count || 0} Students
+                                                        <Users className="w-3 h-3 mr-1" /> {cls.student_count || 0} {t('dashboard.students')}
                                                     </p>
-                                                </div>
-                                                <button
-                                                    onClick={() => openClassManager(cls.id)}
-                                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-                                                >
-                                                    Manage Class
-                                                </button>
+                                                </div><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => openClassOverview(cls.id, cls.name)}
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                                                    >
+                                                        {t('dashboard.moduleOverview')}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openClassManager(cls.id)}
+                                                        className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                                                    >
+                                                        {t('dashboard.manageClass')}
+                                                    </button></div>
                                             </div>
                                         ))}
                                     </div>
@@ -378,23 +473,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             {/* Joined Classes */}
                             <div>
                                 <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                                    <Users className="w-5 h-5 mr-2 text-purple-600" /> Classes I've Joined
+                                    <Users className="w-5 h-5 mr-2 text-purple-600" /> {t('dashboard.classesJoined')}
                                 </h2>
                                 {classesData.joined.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
-                                    <p className="text-sm text-slate-500">No joined classes found.</p>
+                                    <p className="text-sm text-slate-500">{t('dashboard.noJoinedClasses')}</p>
                                 ) : (
                                     <div className="grid gap-4">
                                         {classesData.joined.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(cls => (
                                             <div key={cls.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow flex items-center justify-between">
                                                 <div>
                                                     <h3 className="text-lg font-semibold text-slate-800">{cls.name}</h3>
-                                                    <p className="text-sm text-slate-500 mt-1">Instructor: {cls.instructor_name}</p>
+                                                    <p className="text-sm text-slate-500 mt-1">{t('dashboard.instructor')}{cls.instructor_name}</p>
                                                 </div>
                                                 <button
-                                                    onClick={() => cls.student_station_id ? onOpenStation(cls.student_station_id) : alert('Station not found')}
+                                                    onClick={() => cls.student_station_id ? onOpenStation(cls.student_station_id) : alert(t('dashboard.stationNotFound'))}
                                                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                                                 >
-                                                    <FileEdit className="w-4 h-4 mr-2" /> Open My Workspace
+                                                    <FileEdit className="w-4 h-4 mr-2" /> {t('dashboard.openWorkspace')}
                                                 </button>
                                             </div>
                                         ))}
@@ -605,26 +700,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
             {showCreateClass && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
-                        <h3 className="text-xl font-bold text-slate-800 mb-4">Create New Class</h3>
+                        <h3 className="text-xl font-bold text-slate-800 mb-4">{t('dashboard.createNewClass')}</h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Class Name</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('dashboard.className')}</label>
                                 <input
                                     type="text"
                                     value={newClassName}
                                     onChange={e => setNewClassName(e.target.value)}
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g. Fall 2026 CS101"
+                                    placeholder={t('dashboard.classNamePlaceholder')}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Base Learning Station</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('dashboard.baseLearningStation')}</label>
                                 <select
                                     value={newClassBaseId}
                                     onChange={e => setNewClassBaseId(e.target.value)}
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                                 >
-                                    <option value="">-- Select a Station --</option>
+                                    <option value="">{t('dashboard.selectStation')}</option>
                                     {stations.map(s => (
                                         <option key={s.id} value={s.id}>{s.title || s.code}</option>
                                     ))}
@@ -632,13 +727,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             </div>
                         </div>
                         <div className="flex justify-end space-x-3 mt-6">
-                            <button onClick={() => setShowCreateClass(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                            <button onClick={() => setShowCreateClass(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">{t('dashboard.cancel')}</button>
                             <button
                                 onClick={handleCreateClass}
                                 disabled={creatingClass || !newClassName || !newClassBaseId}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
                             >
-                                {creatingClass ? 'Creating...' : 'Create Class'}
+                                {creatingClass ? t('dashboard.creating') : t('dashboard.createClass')}
                             </button>
                         </div>
                     </div>
@@ -647,7 +742,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
 
             {/* ═══ Manage Class Modal ═══ */}
             {manageClassId && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setManageClassId(null)}>
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={closeClassManager}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center">
@@ -657,13 +752,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                             <div className="flex items-center space-x-2">
                                 {classDetails && classDetails.role === 'instructor' && classDetails.members.length > 0 && (
                                     <button
-                                        onClick={() => { setOverviewClassId(manageClassId); setOverviewClassName(classDetails.class.name); setManageClassId(null); }}
+                                        onClick={() => openClassOverview(manageClassId, classDetails.class.name)}
                                         className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
                                     >
-                                        <Layers className="w-3.5 h-3.5 mr-1.5" /> Module Overview
+                                        <Layers className="w-3.5 h-3.5 mr-1.5" /> {t('dashboard.moduleOverview')}
                                     </button>
                                 )}
-                                <button onClick={() => setManageClassId(null)} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+                                <button onClick={closeClassManager} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
                                     <X className="w-5 h-5 text-slate-400" />
                                 </button>
                             </div>
@@ -676,11 +771,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                 <div className="space-y-6">
                                     {/* Add Student Form */}
                                     <div className="bg-white p-4 rounded-xl border border-slate-200">
-                                        <h4 className="text-sm font-semibold text-slate-700 mb-3">Add Student</h4>
+                                        <h4 className="text-sm font-semibold text-slate-700 mb-3">{t('dashboard.addStudent')}</h4>
                                         <div className="flex space-x-2">
                                             <input
                                                 type="email"
-                                                placeholder="Student Email Address"
+                                                placeholder={t('dashboard.studentEmailPlaceholder')}
                                                 value={newMemberEmail}
                                                 onChange={e => setNewMemberEmail(e.target.value)}
                                                 onKeyDown={e => e.key === 'Enter' && handleAddMember()}
@@ -691,7 +786,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                                 disabled={addingMember || !newMemberEmail.trim()}
                                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center"
                                             >
-                                                {addingMember ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />} Add
+                                                {addingMember ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />} {t('dashboard.add')}
                                             </button>
                                         </div>
                                     </div>
@@ -699,11 +794,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                     {/* Students List */}
                                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                                         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                                            <h4 className="text-sm font-semibold text-slate-700">Enrolled Students ({classDetails.members.length})</h4>
+                                            <h4 className="text-sm font-semibold text-slate-700">{t('dashboard.enrolledStudents')} ({classDetails.members.length})</h4>
                                         </div>
                                         <div className="divide-y divide-slate-100">
                                             {classDetails.members.length === 0 ? (
-                                                <p className="text-center py-6 text-sm text-slate-500">No students joined yet.</p>
+                                                <p className="text-center py-6 text-sm text-slate-500">{t('dashboard.noStudentsJoined')}</p>
                                             ) : (
                                                 classDetails.members.map(member => (
                                                     <div key={member.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
@@ -717,13 +812,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                                                     onClick={() => onOpenStation(member.station_id!)}
                                                                     className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
                                                                 >
-                                                                    <FolderOpen className="w-3 h-3 mr-1" /> View Workspace
+                                                                    <FolderOpen className="w-3 h-3 mr-1" /> {t('dashboard.viewWorkspace')}
                                                                 </button>
                                                             )}
                                                             <button
                                                                 onClick={() => handleRemoveMemberUser(member.id)}
                                                                 className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                                title="Remove Student"
+                                                                title={t('dashboard.removeStudent')}
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
                                                             </button>
@@ -745,8 +840,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                 <ClassOverview
                     classId={overviewClassId}
                     className={overviewClassName}
-                    onClose={() => setOverviewClassId(null)}
-                    onOpenStation={(stationId) => { setOverviewClassId(null); onOpenStation(stationId); }}
+                    onClose={closeClassOverview}
+                    onOpenStation={(stationId) => { closeClassOverview(); onOpenStation(stationId); }}
                 />
             )}
 

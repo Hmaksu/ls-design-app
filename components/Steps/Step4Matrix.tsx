@@ -210,7 +210,14 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                     if (c.subContents) {
                         c.subContents.forEach(s => {
                             totalRows++;
-                            if (s.subContents) totalRows += s.subContents.length;
+                            if (s.subContents) {
+                                s.subContents.forEach(ss => {
+                                    totalRows++;
+                                    if (ss.subContents) {
+                                        totalRows += ss.subContents.length;
+                                    }
+                                });
+                            }
                         });
                     }
                 });
@@ -384,7 +391,19 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
                         let totalRows = 0;
                         mod.contents.forEach(c => {
                             totalRows++;
-                            if (c.subContents) totalRows += c.subContents.length;
+                            if (c.subContents) {
+                                c.subContents.forEach(s => {
+                                    totalRows++;
+                                    if (s.subContents) {
+                                        s.subContents.forEach(ss => {
+                                            totalRows++;
+                                            if (ss.subContents) {
+                                                totalRows += ss.subContents.length;
+                                            }
+                                        });
+                                    }
+                                });
+                            }
                         });
                         let isFirstRowForAssessment = true;
                         // Calculate equal width for mode columns (e.g. if 5 modes, each gets same share)

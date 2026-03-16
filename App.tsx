@@ -84,10 +84,10 @@ function App() {
 
   // ═══ Browser History Navigation ═══
   const pushNav = (v: AppView, step: number) => {
-    let hash = '#/';
-    if (v === 'dashboard') hash = '#/dashboard';
-    else if (v === 'editor') hash = `#/editor/step/${step}`;
-    window.history.pushState({ view: v, step }, '', hash);
+    let pathUrl = '/';
+    if (v === 'dashboard') pathUrl = '/dashboard';
+    else if (v === 'editor') pathUrl = `/editor/step/${step}`;
+    window.history.pushState({ view: v, step }, '', pathUrl);
   };
 
   useEffect(() => {
@@ -110,7 +110,7 @@ function App() {
   const handleAuthSuccess = (u: AuthUser) => {
     setUser(u);
     setView('dashboard');
-    window.history.replaceState({ view: 'dashboard', step: 1 }, '', '#/dashboard');
+    window.history.replaceState({ view: 'dashboard', step: 1 }, '', '/dashboard');
   };
 
   const handleLogout = () => {
@@ -121,7 +121,7 @@ function App() {
     setPast([]);
     setFuture([]);
     setEditingId(null);
-    window.history.replaceState({ view: 'auth', step: 1 }, '', '#/');
+    window.history.replaceState({ view: 'auth', step: 1 }, '', '/');
   };
 
   // ═══ Dashboard Handlers ═══
@@ -514,7 +514,7 @@ function App() {
               <span className="text-xs text-slate-300 mr-2">{user.name}</span>
             )}
             <div className="text-sm font-medium bg-itu-blue/50 px-3 py-1 rounded border border-itu-cyan/30">
-              Pre-Alpha v3.0.0
+              {t('header.version')}
             </div>
           </div>
         </div>
