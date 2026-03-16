@@ -305,8 +305,8 @@
         "allStudents": "All Students",
         "allModules": "All Modules",
         "filters": "Filters",
-        "filterStudents": "Filter Students",
-        "filterModules": "Filter Modules",
+        "filterStudents": "FILTER STUDENTS",
+        "filterModules": "FILTER MODULES",
         "selectAll": "Select All",
         "clearAll": "Clear All",
         "apply": "Apply"

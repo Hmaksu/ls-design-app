@@ -300,7 +300,15 @@
         "learningOutcome": "Öğrenme Çıktısı",
         "assessment": "Değerlendirme",
         "contentsTitle": "İÇERİKLER",
-        "untitled": "Başlıksız"
+        "untitled": "Başlıksız",
+        "allStudents": "Tüm Öğrenciler",
+        "allModules": "Tüm Modüller",
+        "filters": "Filtreler",
+        "filterStudents": "ÖĞRENCİLERİ FİLTRELE",
+        "filterModules": "MODÜLLERİ FİLTRELE",
+        "selectAll": "Tümünü Seç",
+        "clearAll": "Tümünü Temizle",
+        "apply": "Uygula"
     },
     "auth": {
         "title": "Öğrenim İstasyon Tasarımcısı",
