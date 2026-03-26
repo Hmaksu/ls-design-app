@@ -368,5 +368,12 @@
         "15": "15. Vita sulla terra",
         "16": "16. Pace, giustizia e istituzioni solide",
         "17": "17. Partnership per gli obiettivi"
-    }
+    },
+    "chat": {
+    "title": "Chat della stazione",
+    "loading": "Caricamento messaggi...",
+    "noMessages": "Ancora nessun messaggio. Inizia la conversazione!",
+    "placeholder": "Scrivi un messaggio...",
+    "you": "Tu"
+  }
 }

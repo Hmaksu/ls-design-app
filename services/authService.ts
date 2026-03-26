@@ -147,6 +147,45 @@ export async function removeCollaborator(stationId: string, userId: number): Pro
     });
 }
 
+// ════ CHAT / MESSAGES ════
+
+export interface StationMessage {
+    id: number;
+    station_id: string;
+    user_id: number;
+    message: string;
+    reference_target?: string;
+    created_at: string;
+    user_name: string;
+}
+
+export async function getStationMessages(stationId: string, afterId: number = 0): Promise<StationMessage[]> {
+    const data = await apiFetch(`/ls/${stationId}/messages?afterId=${afterId}`);
+    return data.messages || [];
+}
+
+export async function postStationMessage(stationId: string, message: string, reference_target?: string): Promise<StationMessage> {
+    const data = await apiFetch(`/ls/${stationId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ message, reference_target }),
+    });
+    return data.message;
+}
+
+export async function editStationMessage(stationId: string, msgId: number, message: string): Promise<StationMessage> {
+    const data = await apiFetch(`/ls/${stationId}/messages/${msgId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ message }),
+    });
+    return data.message;
+}
+
+export async function deleteStationMessage(stationId: string, msgId: number): Promise<void> {
+    await apiFetch(`/ls/${stationId}/messages/${msgId}`, {
+        method: 'DELETE',
+    });
+}
+
 // ════ Classes ════
 
 import { ClassEntity, ClassMember } from '../types';

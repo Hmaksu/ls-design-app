@@ -370,5 +370,12 @@
         "15": "15. Vie terrestre",
         "16": "16. Paix, justice et institutions efficaces",
         "17": "17. Partenariats pour la réalisation des objectifs"
-    }
+    },
+    "chat": {
+    "title": "Discussion de la station",
+    "loading": "Chargement des messages...",
+    "noMessages": "Aucun message pour l'instant. Commencez la conversation!",
+    "placeholder": "Tapez un message...",
+    "you": "Vous"
+  }
 }

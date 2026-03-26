@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LSContextType, BloomLevel, DeliveryModeType, LSModule, LSContent, LearningObjective } from '../../types';
 import { DELIVERY_MODE_ICONS, DELIVERY_MODE_LABELS } from '../../constants';
 import { Trash2, Plus, ChevronDown, ChevronUp, ChevronRight, Link as LinkIcon, Box, FileText, CornerDownRight, PenLine, ArrowUp, ArrowDown, X, Search, Check, ExternalLink, ListTree, FoldVertical, UnfoldVertical, Info } from 'lucide-react';
@@ -72,7 +72,8 @@ const ContentFields: React.FC<{
   content: LSContent;
   onUpdate: (data: Partial<LSContent>) => void;
   isClassStudent?: boolean;
-}> = ({ content, onUpdate, isClassStudent }) => {
+  targetPrefix: string;
+}> = ({ content, onUpdate, isClassStudent, targetPrefix }) => {
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -151,6 +152,8 @@ const ContentFields: React.FC<{
             placeholder={t('step3.contentTitlePlace')}
             disabled={isClassStudent}
             className={`w-full text-sm bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2.5 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+            data-chat-target={`${targetPrefix}-title`}
+            data-chat-name="Content Title"
           />
         </div>
         <div className="md:col-span-4">
@@ -161,6 +164,8 @@ const ContentFields: React.FC<{
             onChange={(e) => onUpdate({ duration: e.target.value === '' ? undefined : (parseInt(e.target.value, 10) || 0) })}
             disabled={isClassStudent}
             className={`w-full text-sm bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2.5 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+            data-chat-target={`${targetPrefix}-duration`}
+            data-chat-name="Content Duration"
           />
         </div>
 
@@ -183,7 +188,9 @@ const ContentFields: React.FC<{
                     linksUrls = [modeData];
                   }
                   return (
-                    <div key={mode} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-slate-300 transition-colors">
+                    <div key={mode} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-slate-300 transition-colors"
+                         data-chat-target={`${targetPrefix}-mode-${mode}`}
+                         data-chat-name={`Delivery Mode: ${mode}`}>
                       <div className="flex items-center space-x-3 min-w-[200px] mt-2">
                         <span className="text-itu-blue p-2 bg-blue-50/80 border border-blue-100 rounded-md shadow-sm">{DELIVERY_MODE_ICONS[mode]}</span>
                         <span className="text-sm font-bold text-slate-700 truncate">{t(`deliveryModes.${mode}` as any) || DELIVERY_MODE_LABELS[mode]}</span>
@@ -191,7 +198,9 @@ const ContentFields: React.FC<{
 
                       <div className="flex-grow flex flex-col gap-2 w-full">
                         {isOther && (
-                          <input type="text" value={content.customDeliveryMode || ''} onChange={(e) => onUpdate({ customDeliveryMode: e.target.value })} placeholder={t('step3.specifyMethod')} className="text-sm border border-slate-300 rounded-lg px-3 py-2 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all w-full md:w-1/2" />
+                          <input type="text" value={content.customDeliveryMode || ''} onChange={(e) => onUpdate({ customDeliveryMode: e.target.value })} placeholder={t('step3.specifyMethod')} className="text-sm border border-slate-300 rounded-lg px-3 py-2 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all w-full md:w-1/2" 
+                                 data-chat-target={`${targetPrefix}-customMode`}
+                                 data-chat-name="Custom Delivery Mode" />
                         )}
 
                         <div className="flex flex-col gap-2">
@@ -199,7 +208,9 @@ const ContentFields: React.FC<{
                             <div key={index} className="flex flex-col sm:flex-row gap-2 w-full">
                               <div className="flex-1 flex items-center relative">
                                 <LinkIcon className="w-4 h-4 text-slate-400 absolute left-3" />
-                                <input type="text" value={linkUrl || ''} onChange={(e) => updateLink(mode, index, e.target.value)} placeholder="https:// example.com/resource" className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all" />
+                                <input type="text" value={linkUrl || ''} onChange={(e) => updateLink(mode, index, e.target.value)} placeholder="https:// example.com/resource" className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all" 
+                                       data-chat-target={`${targetPrefix}-link-${mode}-${index}`}
+                                       data-chat-name={`Link: ${mode}`} />
                               </div>
                               <div className="flex items-center space-x-1 shrink-0">
                                 {linkUrl && (
@@ -257,7 +268,8 @@ const SubSubContentCard: React.FC<{
   isFirst: boolean;
   isLast: boolean;
   isClassStudent?: boolean;
-}> = ({ subSub, index, sIdx, ssIdx, onUpdate, onRemove, onMove, isFirst, isLast, isClassStudent }) => {
+  targetPrefix: string;
+}> = ({ subSub, index, sIdx, ssIdx, onUpdate, onRemove, onMove, isFirst, isLast, isClassStudent, targetPrefix }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   return (
@@ -290,7 +302,7 @@ const SubSubContentCard: React.FC<{
       </div>
       {isExpanded && (
         <div className="mt-3 pt-3 border-t border-slate-200 animate-fade-in">
-          <ContentFields content={subSub} onUpdate={onUpdate} isClassStudent={isClassStudent} />
+          <ContentFields content={subSub} onUpdate={onUpdate} isClassStudent={isClassStudent} targetPrefix={targetPrefix} />
         </div>
       )}
     </div>
@@ -308,9 +320,23 @@ const SubContentCard: React.FC<{
   isFirst: boolean;
   isLast: boolean;
   isClassStudent?: boolean;
-}> = ({ sub, index, sIdx, onUpdate, onRemove, onMove, isFirst, isLast, isClassStudent }) => {
+  mIndex: number;
+}> = ({ sub, index, sIdx, onUpdate, onRemove, onMove, isFirst, isLast, isClassStudent, mIndex }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Listen for expand events targeting this sub-content
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const path = e.detail as string;
+      const subPrefix = `step-3-mod-${mIndex}-con-${index}-sub-${sIdx}`;
+      if (path.startsWith(subPrefix)) {
+        setIsExpanded(true);
+      }
+    };
+    window.addEventListener('ls-expand-path', handler as EventListener);
+    return () => window.removeEventListener('ls-expand-path', handler as EventListener);
+  }, [mIndex, index, sIdx]);
   const addSubSubContent = () => {
     const newSubSub: LSContent = {
       id: crypto.randomUUID(),
@@ -342,7 +368,10 @@ const SubContentCard: React.FC<{
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-4 mb-3 relative transition-all shadow-sm hover:shadow-md">
+    <div className="bg-white border border-slate-200 rounded-lg p-4 mb-3 relative transition-all shadow-sm hover:shadow-md"
+         data-chat-target={`step-3-mod-${mIndex}-con-${index}-sub-${sIdx}-title`}
+         data-chat-name={`SubContent: ${sub.title || 'Untitled'}`}
+    >
       <div className="flex items-center justify-between pointer-events-auto">
         <div className="flex items-center flex-grow cursor-pointer group" onClick={() => setIsExpanded(!isExpanded)}>
           {isExpanded ? <ChevronDown className="w-4 h-4 mr-2 text-slate-400 group-hover:text-itu-blue transition-colors" /> : <ChevronRight className="w-4 h-4 mr-2 text-slate-400 group-hover:text-itu-blue transition-colors" />}
@@ -377,7 +406,7 @@ const SubContentCard: React.FC<{
       </div>
       {isExpanded && (
         <div className="mt-4 pt-4 border-t border-slate-100 animate-fade-in">
-          <ContentFields content={sub} onUpdate={onUpdate} isClassStudent={isClassStudent} />
+          <ContentFields content={sub} onUpdate={onUpdate} isClassStudent={isClassStudent} targetPrefix={`step-3-mod-${mIndex}-con-${index}-sub-${sIdx}`} />
 
           <div className="mt-4 pl-4 ml-2 border-l-2 border-slate-100 relative pt-2">
             <div className="flex items-center justify-between mb-4 mt-2">
@@ -407,6 +436,7 @@ const SubContentCard: React.FC<{
                 isFirst={ssIdx === 0}
                 isLast={ssIdx === sub.subContents!.length - 1}
                 isClassStudent={isClassStudent}
+                targetPrefix={`step-3-mod-${mIndex}-con-${index}-sub-${sIdx}-ss-${ssIdx}`}
               />
             ))}
           </div>
@@ -426,9 +456,23 @@ const ContentCard: React.FC<{
   isFirst: boolean;
   isLast: boolean;
   isClassStudent?: boolean;
-}> = ({ content, onUpdate, onRemove, onMove, index, isFirst, isLast, isClassStudent }) => {
+  mIndex: number;
+}> = ({ content, onUpdate, onRemove, onMove, index, isFirst, isLast, isClassStudent, mIndex }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Listen for expand events targeting this content or its children
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const path = e.detail as string;
+      const conPrefix = `step-3-mod-${mIndex}-con-${index}`;
+      if (path.startsWith(conPrefix)) {
+        setIsExpanded(true);
+      }
+    };
+    window.addEventListener('ls-expand-path', handler as EventListener);
+    return () => window.removeEventListener('ls-expand-path', handler as EventListener);
+  }, [mIndex, index]);
 
   const addSubContent = () => {
     const newSub: LSContent = {
@@ -461,7 +505,10 @@ const ContentCard: React.FC<{
   };
 
   return (
-    <div className="border border-slate-300 rounded-lg bg-slate-50/50 p-4 mb-4 relative transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-itu-cyan/40">
+    <div className="border border-slate-300 rounded-lg bg-slate-50/50 p-4 mb-4 relative transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-itu-cyan/40"
+         data-chat-target={`step-3-mod-${mIndex}-con-${index}-title`}
+         data-chat-name={`Content: ${content.title || 'Untitled'}`}
+    >
       <div className="flex items-center justify-between pointer-events-auto">
         <div className="flex items-center flex-grow cursor-pointer group" onClick={() => setIsExpanded(!isExpanded)}>
           {isExpanded ? <ChevronDown className="w-5 h-5 mr-2 text-slate-400 group-hover:text-itu-blue transition-colors" /> : <ChevronRight className="w-5 h-5 mr-2 text-slate-400 group-hover:text-itu-blue transition-colors" />}
@@ -505,7 +552,7 @@ const ContentCard: React.FC<{
 
       {isExpanded && (
         <div className="mt-5 pt-5 border-t border-slate-200 animate-fade-in">
-          <ContentFields content={content} onUpdate={onUpdate} isClassStudent={isClassStudent} />
+          <ContentFields content={content} onUpdate={onUpdate} isClassStudent={isClassStudent} targetPrefix={`step-3-mod-${mIndex}-con-${index}`} />
 
           {/* Sub-Contents Area */}
           <div className="mt-8 pl-6 border-l-[3px] border-slate-200/80 lg:pl-8 ml-2">
@@ -530,6 +577,7 @@ const ContentCard: React.FC<{
                 isFirst={sIdx === 0}
                 isLast={sIdx === (content.subContents?.length || 0) - 1}
                 isClassStudent={isClassStudent}
+                mIndex={mIndex}
               />
             ))}
           </div>
@@ -606,7 +654,10 @@ const ModuleCard: React.FC<{
   }, 0);
 
   return (
-    <div id={`module-${module.id}`} className={`border border-slate-200 rounded-lg mb-6 transition-all shadow-sm hover:shadow-md scroll-mt-20 ${isEven ? 'bg-white' : 'bg-slate-50'}`}>
+    <div id={`module-${module.id}`} className={`border border-slate-200 rounded-lg mb-6 transition-all shadow-sm hover:shadow-md scroll-mt-20 ${isEven ? 'bg-white' : 'bg-slate-50'}`}
+         data-chat-target={`step-3-module-${module.id}`}
+         data-chat-name={`Module ${index + 1}: ${module.title || 'Untitled'}`}
+    >
       {/* Header */}
       <div className={`p-4 flex items-center justify-between cursor-pointer border-b border-slate-200 rounded-t-lg sticky top-[60px] z-40 shadow-sm ${isEven ? 'bg-white' : 'bg-slate-100'}`} onClick={onToggleExpand}>
         <div className="flex items-center space-x-4">
@@ -667,6 +718,8 @@ const ModuleCard: React.FC<{
                 onChange={(e) => onUpdate(module.id, { title: e.target.value })}
                 disabled={isClassStudent}
                 className={`w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                data-chat-target={`step-3-mod-${index}-title`}
+                data-chat-name={`Module ${index + 1} Title`}
               />
             </div>
 
@@ -677,6 +730,8 @@ const ModuleCard: React.FC<{
                 onChange={(e) => onUpdate(module.id, { bloomLevel: e.target.value as BloomLevel })}
                 disabled={isClassStudent}
                 className={`w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+                data-chat-target={`step-3-mod-${index}-bloom`}
+                data-chat-name={`Module ${index + 1} Bloom Level`}
               >
                 {Object.values(BloomLevel).map(level => (
                   <option key={level} value={level}>{t(`bloomLevels.${level}` as any) || level}</option>
@@ -695,12 +750,16 @@ const ModuleCard: React.FC<{
                 className={`w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
                 rows={2}
                 placeholder={t('step3.outcomePlace')}
+                data-chat-target={`step-3-mod-${index}-outcome`}
+                data-chat-name={`Module ${index + 1} Outcome`}
               />
             </div>
 
             <div className="col-span-2">
               <label className="block text-xs font-bold text-slate-500 tracking-wide mb-2">{t('step3.relatedObjectives')}</label>
-              <div className="bg-slate-50 p-3 rounded border border-slate-200 max-h-40 overflow-y-auto">
+              <div className="bg-slate-50 p-3 rounded border border-slate-200 max-h-40 overflow-y-auto"
+                   data-chat-target={`step-3-mod-${index}-objectives`}
+                   data-chat-name={`Module ${index + 1} Related Objectives`}>
                 {globalObjectives.length === 0 && <span className="text-xs text-slate-400">{t('step3.noObjectiveDefined')}</span>}
                 {globalObjectives.map((obj, i) => (
                   <label key={obj.id} className="flex items-start space-x-2 mb-2 last:mb-0 cursor-pointer hover:bg-slate-100 p-1 rounded">
@@ -726,6 +785,8 @@ const ModuleCard: React.FC<{
                 disabled={isClassStudent}
                 className={`w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded text-sm focus:border-itu-cyan outline-none ${isClassStudent ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
                 placeholder={t('step3.assessmentPlace')}
+                data-chat-target={`step-3-mod-${index}-assessment`}
+                data-chat-name={`Module ${index + 1} Assessment`}
               />
             </div>
           </div>
@@ -760,6 +821,7 @@ const ModuleCard: React.FC<{
                 isFirst={idx === 0}
                 isLast={idx === module.contents.length - 1}
                 isClassStudent={isClassStudent}
+                mIndex={index}
               />
             ))}
           </div>
@@ -783,6 +845,24 @@ export const Step3Modules: React.FC<{ context: LSContextType }> = ({ context }) 
       currentLS.modules.forEach(m => { initial[m.id] = false; });
       setExpandedModules(initial);
     }
+  }, [currentLS.modules]);
+
+  // Listen for expand events targeting a specific module
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const path = e.detail as string;
+      // Extract module index: step-3-mod-{idx}-...
+      const match = path.match(/^step-3-mod-(\d+)/);
+      if (match) {
+        const modIdx = parseInt(match[1], 10);
+        if (modIdx < currentLS.modules.length) {
+          const modId = currentLS.modules[modIdx].id;
+          setExpandedModules(prev => ({ ...prev, [modId]: true }));
+        }
+      }
+    };
+    window.addEventListener('ls-expand-path', handler as EventListener);
+    return () => window.removeEventListener('ls-expand-path', handler as EventListener);
   }, [currentLS.modules]);
 
   const toggleModule = (id: string) => {

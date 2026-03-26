@@ -420,6 +420,126 @@ app.get('/api/ls/:id', authMiddleware, (req, res) => {
 });
 
 // ═══════════════════════════════════════════
+// CHAT / MESSAGES ROUTES
+// ═══════════════════════════════════════════
+
+// GET /api/ls/:id/messages — fetch messages for a station
+app.get('/api/ls/:id/messages', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const { station, role } = getStationAccess(db, req.params.id, req.user.id);
+        
+        let isInstructor = false;
+        if (station && station.class_id) {
+            const cls = db.prepare('SELECT owner_id FROM classes WHERE id = ?').get(station.class_id);
+            if (cls && cls.owner_id === req.user.id) isInstructor = true;
+        }
+
+        if (!station || (role === 'viewer' && !isInstructor)) {
+            return res.status(403).json({ error: 'Not authorized to view messages' });
+        }
+
+        const afterId = req.query.afterId ? parseInt(req.query.afterId) : 0;
+        
+        const messages = db.prepare(`
+            SELECT sm.id, sm.station_id, sm.user_id, sm.message, sm.reference_target, sm.created_at, u.name as user_name
+            FROM station_messages sm
+            JOIN users u ON sm.user_id = u.id
+            WHERE sm.station_id = ? AND sm.id > ?
+            ORDER BY sm.created_at ASC
+        `).all(req.params.id, afterId);
+
+        res.json({ messages });
+    } catch (err) {
+        console.error('Get messages error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/ls/:id/messages — post a new message to a station
+app.post('/api/ls/:id/messages', authMiddleware, (req, res) => {
+    try {
+        const { message, reference_target } = req.body;
+        if (!message || typeof message !== 'string' || message.trim() === '') {
+            return res.status(400).json({ error: 'Message cannot be empty' });
+        }
+
+        const db = getDb();
+        const { station, role } = getStationAccess(db, req.params.id, req.user.id);
+        
+        let isInstructor = false;
+        if (station && station.class_id) {
+            const cls = db.prepare('SELECT owner_id FROM classes WHERE id = ?').get(station.class_id);
+            if (cls && cls.owner_id === req.user.id) isInstructor = true;
+        }
+
+        if (!station || (role === 'viewer' && !isInstructor)) {
+            return res.status(403).json({ error: 'Not authorized to post messages' });
+        }
+
+        const result = db.prepare(
+            'INSERT INTO station_messages (station_id, user_id, message, reference_target) VALUES (?, ?, ?, ?)'
+        ).run(req.params.id, req.user.id, message.trim(), reference_target || null);
+
+        const newMessage = db.prepare(`
+            SELECT sm.id, sm.station_id, sm.user_id, sm.message, sm.reference_target, sm.created_at, u.name as user_name
+            FROM station_messages sm
+            JOIN users u ON sm.user_id = u.id
+            WHERE sm.id = ?
+        `).get(result.lastInsertRowid);
+
+        res.status(201).json({ success: true, message: newMessage });
+    } catch (err) {
+        console.error('Post message error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// PUT /api/ls/:id/messages/:msgId — edit own message
+app.put('/api/ls/:id/messages/:msgId', authMiddleware, (req, res) => {
+    try {
+        const { message } = req.body;
+        if (!message || typeof message !== 'string' || message.trim() === '') {
+            return res.status(400).json({ error: 'Message cannot be empty' });
+        }
+        const db = getDb();
+        const msg = db.prepare('SELECT * FROM station_messages WHERE id = ? AND station_id = ?').get(req.params.msgId, req.params.id);
+        if (!msg) return res.status(404).json({ error: 'Message not found' });
+        if (msg.user_id !== req.user.id) return res.status(403).json({ error: 'You can only edit your own messages' });
+
+        db.prepare('UPDATE station_messages SET message = ? WHERE id = ?').run(message.trim(), req.params.msgId);
+
+        const updated = db.prepare(`
+            SELECT sm.id, sm.station_id, sm.user_id, sm.message, sm.reference_target, sm.created_at, u.name as user_name
+            FROM station_messages sm
+            JOIN users u ON sm.user_id = u.id
+            WHERE sm.id = ?
+        `).get(req.params.msgId);
+
+        res.json({ success: true, message: updated });
+    } catch (err) {
+        console.error('Edit message error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// DELETE /api/ls/:id/messages/:msgId — delete own message
+app.delete('/api/ls/:id/messages/:msgId', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const msg = db.prepare('SELECT * FROM station_messages WHERE id = ? AND station_id = ?').get(req.params.msgId, req.params.id);
+        if (!msg) return res.status(404).json({ error: 'Message not found' });
+        if (msg.user_id !== req.user.id) return res.status(403).json({ error: 'You can only delete your own messages' });
+
+        db.prepare('DELETE FROM station_messages WHERE id = ?').run(req.params.msgId);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Delete message error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ═══════════════════════════════════════════
 // COLLABORATION ROUTES
 // ═══════════════════════════════════════════
 

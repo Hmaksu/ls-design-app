@@ -370,5 +370,12 @@
         "15": "15. Vida de Ecosistemas Terrestres",
         "16": "16. Paz, Justicia e Instituciones Sólidas",
         "17": "17. Alianzas para lograr los Objetivos"
-    }
+    },
+    "chat": {
+    "title": "Chat de la estación",
+    "loading": "Cargando mensajes...",
+    "noMessages": "Aún no hay mensajes. ¡Inicie la conversación!",
+    "placeholder": "Escribe un mensaje...",
+    "you": "Tú"
+  }
 }

@@ -2,7 +2,7 @@
     "header": {
         "title": "Learning Station Designer",
         "subtitle": "Based on ITU Learning Station Design Guide",
-        "version": "Pre-Alpha v3.0.1"
+        "version": "Pre-Alpha v3.1.0"
     },
     "nav": {
         "myStations": "My Stations",
@@ -433,5 +433,12 @@
         "15": "15. Life on Land",
         "16": "16. Peace, Justice and Strong Institutions",
         "17": "17. Partnerships for the Goals"
+    },
+    "chat": {
+        "title": "Station Chat",
+        "loading": "Loading messages...",
+        "noMessages": "No messages yet. Start the conversation!",
+        "placeholder": "Type a message...",
+        "you": "You"
     }
 }

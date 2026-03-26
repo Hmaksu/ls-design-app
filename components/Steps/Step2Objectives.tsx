@@ -36,7 +36,8 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in">
+    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in"
+         data-chat-target="step-2-objectives" data-chat-name="Step 2: Objectives">
       <div className="flex justify-between items-center mb-6 border-b pb-2">
         <h2 className="text-2xl font-bold text-itu-blue">{t('step2.title')}</h2>
       </div>
@@ -64,6 +65,8 @@ export const Step2Objectives: React.FC<{ context: LSContextType }> = ({ context 
                 disabled={isLocked}
                 className={`w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-md focus:ring-2 focus:ring-itu-cyan focus:border-transparent outline-none text-sm ${isLocked ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
                 rows={2}
+                data-chat-target={`step-2-obj-${index}`}
+                data-chat-name={`Objective ${index + 1}`}
               />
             </div>
             {!isLocked && (

@@ -31,7 +31,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
     const inputClass = `w-full px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-md focus:ring-1 focus:ring-itu-cyan outline-none transition-colors ${isLocked ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`;
 
     return (
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in space-y-8">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in space-y-8"
+             data-chat-target="step-1-general" data-chat-name="Step 1: General Info">
             <div className="border-b pb-4">
                 <h2 className="text-2xl font-bold text-itu-blue">{t('step1.title')}</h2>
                 <p className="text-slate-500 mt-1">{t('step1.subtitle')}</p>
@@ -59,6 +60,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             placeholder={t('step1.exTitle')}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-title"
+                            data-chat-name="Course Title"
                         />
                     </div>
                     <div>
@@ -71,6 +74,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             placeholder={t('step1.exCode')}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-code"
+                            data-chat-name="Course Code"
                         />
                     </div>
                     <div>
@@ -82,6 +87,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             onChange={handleChange}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-ects"
+                            data-chat-name="ECTS"
                         />
                     </div>
                     <div>
@@ -93,6 +100,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             onChange={handleChange}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-initialDesignDate"
+                            data-chat-name="Start Date"
                         />
                     </div>
                     <div>
@@ -104,6 +113,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             onChange={handleChange}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-finalRevisionDate"
+                            data-chat-name="Revision Date"
                         />
                     </div>
                 </div>
@@ -126,6 +137,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             onChange={handleChange}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-subject"
+                            data-chat-name="Subject"
                         />
                     </div>
                     <div>
@@ -136,6 +149,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             onChange={handleChange}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-level"
+                            data-chat-name="Level"
                         >
                             <option value="Basic">{t('step1.levelBasic')}</option>
                             <option value="Intermediate">{t('step1.levelInter')}</option>
@@ -152,6 +167,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             placeholder={t('step1.keywordsPlace')}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-keywords"
+                            data-chat-name="Keywords"
                         />
                     </div>
                     <div className="col-span-2">
@@ -163,6 +180,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             rows={2}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-targetAudience"
+                            data-chat-name="Target Audience"
                         />
                     </div>
                     <div className="col-span-2">
@@ -174,6 +193,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             rows={3}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-description"
+                            data-chat-name="Short Description"
                         />
                     </div>
                     <div className="col-span-2">
@@ -186,11 +207,15 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             rows={3}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-globalLos"
+                            data-chat-name="Global Learning Outcomes"
                         />
                     </div>
                     <div className="col-span-2">
                         <label className="block text-sm font-medium text-slate-700 mb-2">{t('step1.relatedSdgs')}</label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded-md bg-slate-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded-md bg-slate-50"
+                             data-chat-target="step-1-sdgs"
+                             data-chat-name="Related SDGs">
                             {SDGS_LIST.map((sdg) => {
                                 const isSelected = (currentLS.relatedSDGs || '').includes(sdg);
                                 return (
@@ -233,6 +258,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             disabled={isLocked}
                             placeholder={t('step1.assessmentPlace')}
                             className={inputClass}
+                            data-chat-target="step-1-globalAssessment"
+                            data-chat-name="Global Assessment Methods"
                         />
                     </div>
                     <div>
@@ -245,6 +272,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             disabled={isLocked}
                             placeholder={t('step1.calPlace')}
                             className={inputClass}
+                            data-chat-target="step-1-calendar"
+                            data-chat-name="Calendar"
                         />
                     </div>
                     <div className="flex gap-4">
@@ -258,6 +287,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                                 disabled={isLocked}
                                 placeholder={t('step1.hours')}
                                 className={inputClass}
+                                data-chat-target="step-1-durationInPerson"
+                                data-chat-name="Duration (In-Person)"
                             />
                         </div>
                         <div className="flex-1">
@@ -270,6 +301,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                                 disabled={isLocked}
                                 placeholder={t('step1.hours')}
                                 className={inputClass}
+                                data-chat-target="step-1-durationDigital"
+                                data-chat-name="Duration (Digital)"
                             />
                         </div>
                     </div>
@@ -283,6 +316,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             disabled={isLocked}
                             placeholder={t('step1.quotaPlace')}
                             className={inputClass}
+                            data-chat-target="step-1-quota"
+                            data-chat-name="Quota"
                         />
                     </div>
                     <div>
@@ -293,6 +328,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             onChange={handleChange as any}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-language"
+                            data-chat-name="Language"
                         >
                             <option value="">{t('step1.selectLanguage') || 'Select...'}</option>
                             <option value="Türkçe">Türkçe</option>
@@ -323,6 +360,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             rows={2}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-prerequisites"
+                            data-chat-name="Prerequisites"
                         />
                     </div>
                     <div>
@@ -334,6 +373,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             rows={2}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-specialNeeds"
+                            data-chat-name="Special Needs"
                         />
                     </div>
                     <div>
@@ -345,6 +386,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             rows={2}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-materialsAndResources"
+                            data-chat-name="Materials and Resources"
                         />
                     </div>
                     <div>
@@ -356,6 +399,8 @@ export const Step1General: React.FC<{ context: LSContextType }> = ({ context }) 
                             rows={2}
                             disabled={isLocked}
                             className={inputClass}
+                            data-chat-target="step-1-notes"
+                            data-chat-name="Notes"
                         />
                     </div>
                 </div>

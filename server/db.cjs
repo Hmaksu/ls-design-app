@@ -81,6 +81,17 @@ function initTables() {
       FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS station_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      station_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      message TEXT NOT NULL,
+      reference_target TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (station_id) REFERENCES learning_stations(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
 
   // Migration: add columns to existing databases
@@ -89,7 +100,8 @@ function initTables() {
     "ALTER TABLE users ADD COLUMN security_question TEXT DEFAULT ''",
     "ALTER TABLE users ADD COLUMN security_answer TEXT DEFAULT ''",
     "ALTER TABLE learning_stations ADD COLUMN is_published INTEGER DEFAULT 0",
-    "ALTER TABLE learning_stations ADD COLUMN class_id TEXT DEFAULT NULL"
+    "ALTER TABLE learning_stations ADD COLUMN class_id TEXT DEFAULT NULL",
+    "ALTER TABLE station_messages ADD COLUMN reference_target TEXT"
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch (e) { /* column already exists */ }

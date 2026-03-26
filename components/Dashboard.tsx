@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
     Plus, FolderOpen, Trash2, Clock, Layers, BookOpen, Globe,
-    Search, LogOut, User, Loader2, AlertCircle, Share2, Users, X, UserPlus, UserMinus, MessageSquare, Shield, GraduationCap, FileEdit, Bell
+    Search, LogOut, User, Loader2, AlertCircle, Share2, Users, X, UserPlus, UserMinus, MessageSquare, Shield, GraduationCap, FileEdit, Bell,
+    Bug,
+    Database
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -119,14 +121,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
 
     useEffect(() => {
         loadStations();
-        const hasSeenUpdates = localStorage.getItem('hasSeenUpdates_v1');
+        const hasSeenUpdates = localStorage.getItem('hasSeenUpdates_v3.1');
         if (!hasSeenUpdates) {
             setShowUpdatesModal(true);
         }
     }, []);
 
     const handleCloseUpdates = () => {
-        localStorage.setItem('hasSeenUpdates_v1', 'true');
+        localStorage.setItem('hasSeenUpdates_v3.1', 'true');
         setShowUpdatesModal(false);
     };
 
@@ -840,6 +842,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                 <ClassOverview
                     classId={overviewClassId}
                     className={overviewClassName}
+                    user={user}
                     onClose={closeClassOverview}
                     onOpenStation={(stationId) => { closeClassOverview(); onOpenStation(stationId); }}
                 />
@@ -858,7 +861,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                         <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-bold text-slate-800 flex items-center">
-                                    <span className="text-xl mr-2">🚀</span> Version 3.0 Released
+                                    <span className="text-xl mr-2">🚀</span> Version 3.1 Released
                                 </h3>
                                 <button
                                     onClick={handleCloseUpdates}
@@ -875,16 +878,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                         <div className="p-6 space-y-4">
                             <div className="flex items-start">
                                 <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mt-0.5 mr-3 text-blue-600">
-                                    <GraduationCap className="w-4 h-4" />
+                                    <MessageSquare className="w-4 h-4" />
                                 </div>
                                 <div>
                                     <h4 className="text-sm font-semibold text-slate-800">
-                                        Class Feature Added
+                                        New Messaging Feature in Stations
                                     </h4>
                                     <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                                        A new class feature has been added. You can now manage class-related
-                                        workflows more easily within the platform.
-                                    </p>
+                                        We have introduced a dedicated messaging feature within Stations, designed to enhance productivity, streamline communication, and foster better co-creation.                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-pink-200 flex items-center justify-center mt-0.5 mr-3 text-pink-600">
+                                    <Bug className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-800">
+                                        Minor bug fixes and performance improvements.
+                                    </h4>
+                                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                                        We've squashed a few minor bugs to keep things running smoothly.                                    </p>
+
                                 </div>
                             </div>
 

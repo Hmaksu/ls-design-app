@@ -9,6 +9,7 @@ import { Dashboard } from './components/Dashboard';
 import { ContactForm } from './components/ContactForm';
 import { ChevronRight, ChevronLeft, Save, Upload, ArrowLeft, Download, MessageSquare, Undo2, Redo2 } from 'lucide-react';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { StationChat } from './components/StationChat';
 import { useTranslation } from 'react-i18next';
 import {
   isLoggedIn, getMe, logout as apiLogout,
@@ -57,6 +58,48 @@ function App() {
   const [role, setRole] = useState<'owner' | 'collaborator' | 'viewer'>('owner');
   const [showContactForm, setShowContactForm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Custom navigation event listener for annotations
+  useEffect(() => {
+    const handleNavigation = (e: CustomEvent) => {
+      const targetId = e.detail;
+      if (typeof targetId === 'string') {
+        if (targetId.startsWith('step-1')) setCurrentStep(1);
+        else if (targetId.startsWith('step-2')) setCurrentStep(2);
+        else if (targetId.startsWith('step-3')) setCurrentStep(3);
+        else if (targetId.startsWith('step-4')) setCurrentStep(4);
+
+        // For step-3 targets, broadcast an expand event so collapsed components open
+        if (targetId.startsWith('step-3-mod-')) {
+          window.dispatchEvent(new CustomEvent('ls-expand-path', { detail: targetId }));
+        }
+
+        // Retry scroll with increasing delays to allow expand animations to complete
+        const tryScroll = (attempt: number) => {
+          const el = document.querySelector(`[data-chat-target="${targetId}"]`) as HTMLElement;
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-4', 'ring-itu-cyan', 'animate-pulse', 'z-10');
+            setTimeout(() => el.classList.remove('ring-4', 'ring-itu-cyan', 'animate-pulse', 'z-10'), 2500);
+          } else if (attempt < 4) {
+            setTimeout(() => tryScroll(attempt + 1), 200);
+          }
+        };
+        setTimeout(() => tryScroll(0), 150);
+      }
+    };
+
+    window.addEventListener('ls-navigate', handleNavigation as EventListener);
+    return () => window.removeEventListener('ls-navigate', handleNavigation as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const handleChatToggle = (e: CustomEvent) => setIsChatOpen(e.detail);
+    window.addEventListener('ls-chat-toggle', handleChatToggle as EventListener);
+    return () => window.removeEventListener('ls-chat-toggle', handleChatToggle as EventListener);
+  }, []);
+
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [past, setPast] = useState<LearningStation[]>([]);
@@ -426,8 +469,9 @@ function App() {
 
   // ═══ Editor View ═══
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-white">
-      {/* Editor Header */}
+    <div className="min-h-screen flex font-sans bg-slate-50 overflow-hidden relative">
+      <div className={`flex flex-col flex-1 h-screen overflow-y-auto transition-all duration-300 ease-in-out ${isChatOpen ? 'lg:pr-[33.33vw] md:pr-80' : 'pr-0'}`}>
+        {/* Editor Header */}
       <header className="bg-itu-blue text-white shadow-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -618,8 +662,14 @@ function App() {
           </div>
         </div>
       </footer>
+      </div>
 
       {showContactForm && <ContactForm onClose={() => setShowContactForm(false)} userName={user?.name} userEmail={user?.email} />}
+      
+      {/* Floating Chat for Current Station */}
+      {view === 'editor' && currentLS.id && (
+        <StationChat stationId={currentLS.id} user={user} />
+      )}
     </div>
   );
 }

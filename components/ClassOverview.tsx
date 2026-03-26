@@ -7,10 +7,13 @@ import {
 import { getClassOverview } from '../services/authService';
 import { DELIVERY_MODE_ICONS, DELIVERY_MODE_LABELS } from '../constants';
 import { useTranslation } from 'react-i18next';
+import { StationChat } from './StationChat';
+import { MessageCircle } from 'lucide-react';
 
 interface ClassOverviewProps {
     classId: string;
     className: string;
+    user: { id: number; name: string; email: string; role?: string };
     onClose: () => void;
     onOpenStation: (stationId: string) => void;
 }
@@ -24,7 +27,7 @@ interface StudentOverview {
     modules: any[];
 }
 
-export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className, onClose, onOpenStation }) => {
+export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className, user, onClose, onOpenStation }) => {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [students, setStudents] = useState<StudentOverview[]>([]);
@@ -33,6 +36,7 @@ export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className
     const [studentFilters, setStudentFilters] = useState<number[]>([]);
     const [moduleFilters, setModuleFilters] = useState<number[]>([]);
     const [showFilters, setShowFilters] = useState(false);
+    const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
     useEffect(() => {
         loadOverview();
@@ -286,22 +290,40 @@ export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className
                                                 {totalModuleCount(student)} {t('classOverview.modules')}
                                             </span>
                                             {student.station_id && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); onOpenStation(student.station_id!); }}
-                                                    className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
-                                                >
-                                                    <FolderOpen className="w-3 h-3 mr-1.5" /> {t('classOverview.openStation')}
-                                                </button>
+                                                <div className="flex items-center space-x-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setActiveChatId(activeChatId === student.station_id ? null : student.station_id!);
+                                                            if (!expandedStudents[student.student_id]) toggleStudent(student.student_id);
+                                                        }}
+                                                        className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                                                            activeChatId === student.station_id 
+                                                                ? 'bg-blue-600 text-white border-blue-600' 
+                                                                : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
+                                                        }`}
+                                                    >
+                                                        <MessageCircle className="w-3 h-3 mr-1.5" /> 
+                                                        {t('chat.title') || 'Chat'}
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onOpenStation(student.station_id!); }}
+                                                        className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                                                    >
+                                                        <FolderOpen className="w-3 h-3 mr-1.5" /> {t('classOverview.openStation')}
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Student Modules */}
+                                    {/* Student Modules & Chat */}
                                     {expandedStudents[student.student_id] && (
-                                        <div className="p-4">
-                                            {student.modules.length === 0 ? (
-                                                <p className="text-sm text-slate-400 py-4 text-center italic">{t('classOverview.noModulesYet')}</p>
-                                            ) : (
+                                        <div className="p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                            <div className={activeChatId === student.station_id ? 'lg:col-span-2' : 'lg:col-span-3'}>
+                                                {student.modules.length === 0 ? (
+                                                    <p className="text-sm text-slate-400 py-4 text-center italic">{t('classOverview.noModulesYet')}</p>
+                                                ) : (
                                                 <div className="space-y-3">
                                                     {student.modules.map((mod: any, modIdx: number) => {
                                                         if (moduleFilters.length > 0 && !moduleFilters.includes(modIdx)) return null;
@@ -317,6 +339,8 @@ export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className
                                                                 <div
                                                                     className="px-4 py-3 flex items-center justify-between cursor-pointer"
                                                                     onClick={() => toggleModule(moduleKey)}
+                                                                    data-chat-target={`step-3-mod-${modIdx}-title`}
+                                                                    data-chat-name={`Module: ${mod.title || t('classOverview.untitledModule')}`}
                                                                 >
                                                                     <div className="flex items-center space-x-3">
                                                                         {isModExpanded ? <ChevronDown className="w-4 h-4 text-blue-500" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
@@ -345,15 +369,27 @@ export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className
                                                                     <div className="border-t border-slate-200 px-4 py-4 space-y-4 animate-fade-in">
                                                                         {/* Module Metadata */}
                                                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                                            <div className="bg-white p-3 rounded-lg border border-slate-100">
+                                                                            <div 
+                                                                                className="bg-white p-3 rounded-lg border border-slate-100"
+                                                                                data-chat-target={`step-3-mod-${modIdx}-bloom`}
+                                                                                data-chat-name={`Bloom Level (${mod.title || 'Module'})`}
+                                                                            >
                                                                                 <span className="text-xs font-bold text-slate-400 block mb-1">{t('classOverview.bloomLevel')}</span>
                                                                                 <span className="text-sm font-medium text-slate-700">{t(`bloomLevels.${mod.bloomLevel}` as any) || mod.bloomLevel || '-'}</span>
                                                                             </div>
-                                                                            <div className="bg-white p-3 rounded-lg border border-slate-100">
+                                                                            <div 
+                                                                                className="bg-white p-3 rounded-lg border border-slate-100"
+                                                                                data-chat-target={`step-3-mod-${modIdx}-outcome`}
+                                                                                data-chat-name={`Learning Outcome (${mod.title || 'Module'})`}
+                                                                            >
                                                                                 <span className="text-xs font-bold text-slate-400 block mb-1">{t('classOverview.learningOutcome')}</span>
                                                                                 <span className="text-sm text-slate-700">{mod.learningOutcome || '-'}</span>
                                                                             </div>
-                                                                            <div className="bg-white p-3 rounded-lg border border-slate-100">
+                                                                            <div 
+                                                                                className="bg-white p-3 rounded-lg border border-slate-100"
+                                                                                data-chat-target={`step-3-mod-${modIdx}-assessment`}
+                                                                                data-chat-name={`Assessment (${mod.title || 'Module'})`}
+                                                                            >
                                                                                 <span className="text-xs font-bold text-slate-400 block mb-1">{t('classOverview.assessment')}</span>
                                                                                 <span className="text-sm text-slate-700">{(mod.assessmentMethods || []).join(', ') || '-'}</span>
                                                                             </div>
@@ -365,7 +401,12 @@ export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className
                                                                                 <h5 className="text-xs font-bold text-slate-500 mb-2 tracking-wide">{t('classOverview.contentsTitle')}</h5>
                                                                                 <div className="space-y-2">
                                                                                     {(mod.contents || []).map((content: any, cIdx: number) => (
-                                                                                        <div key={content.id} className="bg-white p-3 rounded-lg border border-slate-100">
+                                                                                        <div 
+                                                                                            key={content.id} 
+                                                                                            className="bg-white p-3 rounded-lg border border-slate-100"
+                                                                                            data-chat-target={`step-3-mod-${modIdx}-con-${cIdx}-title`}
+                                                                                            data-chat-name={`Content: ${content.title || 'Untitled'}`}
+                                                                                        >
                                                                                             <div className="flex items-center justify-between mb-2">
                                                                                                 <span className="text-sm font-medium text-slate-800">
                                                                                                     <span className="text-slate-400 mr-2">#{cIdx + 1}</span>
@@ -390,11 +431,35 @@ export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className
                                                                                                 <div className="mt-2 pl-3 border-l-2 border-slate-100 space-y-1.5">
                                                                                                     {content.subContents.map((sub: any, sIdx: number) => (
                                                                                                         <div key={sub.id} className="text-xs text-slate-600">
-                                                                                                            <span className="text-slate-400">↳ </span>
-                                                                                                            <span className="font-medium">{sub.title || t('classOverview.untitled')}</span>
-                                                                                                            <span className="text-slate-400 ml-2">{sub.duration || 0} {t('classOverview.min')}</span>
-                                                                                                            {sub.deliveryModes && sub.deliveryModes.length > 0 && (
-                                                                                                                <span className="text-blue-500 ml-2">({sub.deliveryModes.length} {t('classOverview.modes')})</span>
+                                                                                                            <div 
+                                                                                                                className="flex items-center hover:bg-slate-50 p-1 rounded border border-transparent hover:border-slate-200 cursor-pointer transition-colors"
+                                                                                                                data-chat-target={`step-3-mod-${modIdx}-con-${cIdx}-sub-${sIdx}-title`}
+                                                                                                                data-chat-name={`SubContent: ${sub.title || 'Untitled'}`}
+                                                                                                            >
+                                                                                                                <span className="text-slate-400 mr-1.5">↳ </span>
+                                                                                                                <span className="font-medium mr-2">{sub.title || t('classOverview.untitled')}</span>
+                                                                                                                <span className="text-slate-400">{sub.duration || 0} {t('classOverview.min')}</span>
+                                                                                                                {sub.deliveryModes && sub.deliveryModes.length > 0 && (
+                                                                                                                    <span className="text-itu-cyan ml-2 font-medium">({sub.deliveryModes.length} {t('classOverview.modes')})</span>
+                                                                                                                )}
+                                                                                                            </div>
+                                                                                                            
+                                                                                                            {/* Sub-Sub-Contents */}
+                                                                                                            {sub.subContents && sub.subContents.length > 0 && (
+                                                                                                                <div className="pl-5 mt-1 space-y-1 border-l-2 border-slate-50 ml-1.5">
+                                                                                                                    {sub.subContents.map((ss: any, ssIdx: number) => (
+                                                                                                                        <div 
+                                                                                                                            key={ss.id} 
+                                                                                                                            className="flex items-center hover:bg-slate-50 p-1 rounded border border-transparent hover:border-slate-200 cursor-pointer transition-colors text-[11px] text-slate-500"
+                                                                                                                            data-chat-target={`step-3-mod-${modIdx}-con-${cIdx}-sub-${sIdx}-ss-${ssIdx}-title`}
+                                                                                                                            data-chat-name={`SubSubContent: ${ss.title || 'Untitled'}`}
+                                                                                                                        >
+                                                                                                                            <span className="text-slate-300 mr-1.5">-</span>
+                                                                                                                            <span className="font-medium mr-2 max-w-[200px] truncate">{ss.title || t('classOverview.untitled')}</span>
+                                                                                                                            <span className="text-slate-300">{ss.duration || 0} {t('classOverview.min')}</span>
+                                                                                                                        </div>
+                                                                                                                    ))}
+                                                                                                                </div>
                                                                                                             )}
                                                                                                         </div>
                                                                                                     ))}
@@ -410,6 +475,12 @@ export const ClassOverview: React.FC<ClassOverviewProps> = ({ classId, className
                                                             </div>
                                                         );
                                                     })}
+                                                </div>
+                                            )}
+                                            </div>
+                                            {activeChatId === student.station_id && (
+                                                <div className="lg:col-span-1 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col h-[600px] sticky top-6">
+                                                    <StationChat stationId={student.station_id} user={user} inline={true} />
                                                 </div>
                                             )}
                                         </div>

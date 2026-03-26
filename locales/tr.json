@@ -433,5 +433,12 @@
         "15": "15. Karasal Yaşam",
         "16": "16. Barış, Adalet ve Güçlü Kurumlar",
         "17": "17. Amaçlar için Ortaklıklar"
-    }
+    },
+    "chat": {
+    "title": "İstasyon Sohbeti",
+    "loading": "Mesajlar yükleniyor...",
+    "noMessages": "Henüz mesaj yok. Sohbete başlayın!",
+    "placeholder": "Bir mesaj yazın...",
+    "you": "Sen"
+  }
 }
