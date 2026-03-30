@@ -121,14 +121,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
 
     useEffect(() => {
         loadStations();
-        const hasSeenUpdates = localStorage.getItem('hasSeenUpdates_v3.1');
+        const hasSeenUpdates = localStorage.getItem('hasSeenUpdates_v3.1.1');
         if (!hasSeenUpdates) {
             setShowUpdatesModal(true);
         }
     }, []);
 
     const handleCloseUpdates = () => {
-        localStorage.setItem('hasSeenUpdates_v3.1', 'true');
+        localStorage.setItem('hasSeenUpdates_v3.1.1', 'true');
         setShowUpdatesModal(false);
     };
 
@@ -861,7 +861,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                         <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-bold text-slate-800 flex items-center">
-                                    <span className="text-xl mr-2">🚀</span> Version 3.1 Released
+                                    <span className="text-xl mr-2">🚀</span> Version 3.1.1 Released
                                 </h3>
                                 <button
                                     onClick={handleCloseUpdates}
@@ -897,9 +897,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNew, onOpenS
                                         Minor bug fixes and performance improvements.
                                     </h4>
                                     <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                                        We've squashed a few minor bugs to keep things running smoothly.                                    </p>
-
-                                </div>
+                                        We’ve resolved a few minor bugs to ensure a smoother experience. You can print your LS as a PDF, just as in previous versions.<br>
+                                        </br>The option to add multiple links to delivery modes is temporarily disabled. If you need any assistance, please don’t hesitate to contact us.</p>                                </div>
                             </div>
 
                             <div className="flex items-start">

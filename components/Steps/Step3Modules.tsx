@@ -189,8 +189,8 @@ const ContentFields: React.FC<{
                   }
                   return (
                     <div key={mode} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-slate-300 transition-colors"
-                         data-chat-target={`${targetPrefix}-mode-${mode}`}
-                         data-chat-name={`Delivery Mode: ${mode}`}>
+                      data-chat-target={`${targetPrefix}-mode-${mode}`}
+                      data-chat-name={`Delivery Mode: ${mode}`}>
                       <div className="flex items-center space-x-3 min-w-[200px] mt-2">
                         <span className="text-itu-blue p-2 bg-blue-50/80 border border-blue-100 rounded-md shadow-sm">{DELIVERY_MODE_ICONS[mode]}</span>
                         <span className="text-sm font-bold text-slate-700 truncate">{t(`deliveryModes.${mode}` as any) || DELIVERY_MODE_LABELS[mode]}</span>
@@ -198,9 +198,9 @@ const ContentFields: React.FC<{
 
                       <div className="flex-grow flex flex-col gap-2 w-full">
                         {isOther && (
-                          <input type="text" value={content.customDeliveryMode || ''} onChange={(e) => onUpdate({ customDeliveryMode: e.target.value })} placeholder={t('step3.specifyMethod')} className="text-sm border border-slate-300 rounded-lg px-3 py-2 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all w-full md:w-1/2" 
-                                 data-chat-target={`${targetPrefix}-customMode`}
-                                 data-chat-name="Custom Delivery Mode" />
+                          <input type="text" value={content.customDeliveryMode || ''} onChange={(e) => onUpdate({ customDeliveryMode: e.target.value })} placeholder={t('step3.specifyMethod')} className="text-sm border border-slate-300 rounded-lg px-3 py-2 focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all w-full md:w-1/2"
+                            data-chat-target={`${targetPrefix}-customMode`}
+                            data-chat-name="Custom Delivery Mode" />
                         )}
 
                         <div className="flex flex-col gap-2">
@@ -208,9 +208,9 @@ const ContentFields: React.FC<{
                             <div key={index} className="flex flex-col sm:flex-row gap-2 w-full">
                               <div className="flex-1 flex items-center relative">
                                 <LinkIcon className="w-4 h-4 text-slate-400 absolute left-3" />
-                                <input type="text" value={linkUrl || ''} onChange={(e) => updateLink(mode, index, e.target.value)} placeholder="https:// example.com/resource" className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all" 
-                                       data-chat-target={`${targetPrefix}-link-${mode}-${index}`}
-                                       data-chat-name={`Link: ${mode}`} />
+                                <input type="text" value={linkUrl || ''} onChange={(e) => updateLink(mode, index, e.target.value)} placeholder="https:// example.com/resource" className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:border-itu-cyan focus:ring-1 focus:ring-itu-cyan outline-none transition-all"
+                                  data-chat-target={`${targetPrefix}-link-${mode}-${index}`}
+                                  data-chat-name={`Link: ${mode}`} />
                               </div>
                               <div className="flex items-center space-x-1 shrink-0">
                                 {linkUrl && (
@@ -227,11 +227,11 @@ const ContentFields: React.FC<{
                             </div>
                           ))}
                         </div>
-                        <div className="flex justify-start mt-1">
+                        {/* <div className="flex justify-start mt-1"> //Add Another Link Button
                           <button onClick={() => addLink(mode)} className="text-xs font-semibold text-itu-cyan hover:text-itu-blue flex items-center transition-colors">
                             <Plus className="w-3 h-3 mr-1" /> Add another link
                           </button>
-                        </div>
+                        </div>*/}
                       </div>
 
                       <div className="flex items-center shrink-0 sm:ml-auto mt-2">
@@ -369,8 +369,8 @@ const SubContentCard: React.FC<{
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 mb-3 relative transition-all shadow-sm hover:shadow-md"
-         data-chat-target={`step-3-mod-${mIndex}-con-${index}-sub-${sIdx}-title`}
-         data-chat-name={`SubContent: ${sub.title || 'Untitled'}`}
+      data-chat-target={`step-3-mod-${mIndex}-con-${index}-sub-${sIdx}-title`}
+      data-chat-name={`SubContent: ${sub.title || 'Untitled'}`}
     >
       <div className="flex items-center justify-between pointer-events-auto">
         <div className="flex items-center flex-grow cursor-pointer group" onClick={() => setIsExpanded(!isExpanded)}>
@@ -506,8 +506,8 @@ const ContentCard: React.FC<{
 
   return (
     <div className="border border-slate-300 rounded-lg bg-slate-50/50 p-4 mb-4 relative transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-itu-cyan/40"
-         data-chat-target={`step-3-mod-${mIndex}-con-${index}-title`}
-         data-chat-name={`Content: ${content.title || 'Untitled'}`}
+      data-chat-target={`step-3-mod-${mIndex}-con-${index}-title`}
+      data-chat-name={`Content: ${content.title || 'Untitled'}`}
     >
       <div className="flex items-center justify-between pointer-events-auto">
         <div className="flex items-center flex-grow cursor-pointer group" onClick={() => setIsExpanded(!isExpanded)}>
@@ -655,8 +655,8 @@ const ModuleCard: React.FC<{
 
   return (
     <div id={`module-${module.id}`} className={`border border-slate-200 rounded-lg mb-6 transition-all shadow-sm hover:shadow-md scroll-mt-20 ${isEven ? 'bg-white' : 'bg-slate-50'}`}
-         data-chat-target={`step-3-module-${module.id}`}
-         data-chat-name={`Module ${index + 1}: ${module.title || 'Untitled'}`}
+      data-chat-target={`step-3-module-${module.id}`}
+      data-chat-name={`Module ${index + 1}: ${module.title || 'Untitled'}`}
     >
       {/* Header */}
       <div className={`p-4 flex items-center justify-between cursor-pointer border-b border-slate-200 rounded-t-lg sticky top-[60px] z-40 shadow-sm ${isEven ? 'bg-white' : 'bg-slate-100'}`} onClick={onToggleExpand}>
@@ -758,8 +758,8 @@ const ModuleCard: React.FC<{
             <div className="col-span-2">
               <label className="block text-xs font-bold text-slate-500 tracking-wide mb-2">{t('step3.relatedObjectives')}</label>
               <div className="bg-slate-50 p-3 rounded border border-slate-200 max-h-40 overflow-y-auto"
-                   data-chat-target={`step-3-mod-${index}-objectives`}
-                   data-chat-name={`Module ${index + 1} Related Objectives`}>
+                data-chat-target={`step-3-mod-${index}-objectives`}
+                data-chat-name={`Module ${index + 1} Related Objectives`}>
                 {globalObjectives.length === 0 && <span className="text-xs text-slate-400">{t('step3.noObjectiveDefined')}</span>}
                 {globalObjectives.map((obj, i) => (
                   <label key={obj.id} className="flex items-start space-x-2 mb-2 last:mb-0 cursor-pointer hover:bg-slate-100 p-1 rounded">

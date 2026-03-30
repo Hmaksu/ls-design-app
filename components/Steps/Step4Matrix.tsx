@@ -318,11 +318,42 @@ export const Step4Matrix: React.FC<{ context: LSContextType }> = ({ context }) =
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 animate-fade-in">
             {/* Print Styles for PDF Export */}
             <style type="text/css" media="print">
-                {`@page { size: A3 portrait !important; margin: 0 !important; width: 100% !important; padding: 0 !important;}
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact;margin: 0 !important; }
-                    body * { visibility: hidden !important; }
-                    #pdf-preview-container * { visibility: visible !important; }
-                    #pdf-preview-container { padding: 1mm !important;  width: 90% !important;position: absolute; margin: 1% !important;top: 5%; left:5%;right:5%;bottom:5%;}
+                {`@page { size: A3 portrait !important; margin: 5mm !important; }
+                    @media print {
+                        html, body {
+                            height: auto !important;
+                            overflow: visible !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        body * { visibility: hidden !important; }
+                        #pdf-preview-container, #pdf-preview-container * { visibility: visible !important; }
+                        /* Only reset ANCESTOR divs that wrap the preview — not content inside it */
+                        div:has(#pdf-preview-container) {
+                            overflow: visible !important;
+                            height: auto !important;
+                            max-height: none !important;
+                            position: static !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            max-width: none !important;
+                            width: 100% !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                            background: transparent !important;
+                        }
+                        #pdf-preview-container {
+                            position: relative !important;
+                            width: 100% !important;
+                            max-width: none !important;
+                            padding: 3mm !important;
+                            margin: 0 !important;
+                            background: white !important;
+                        }
+                        header, footer, nav { display: none !important; }
+                    }
                 `}
             </style>
 
